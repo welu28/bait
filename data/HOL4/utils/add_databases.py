@@ -1,94 +1,92 @@
+import os
+import json
+import pickle
 import random
 import numpy as np
 from tqdm import tqdm
-import json
 from pymongo import MongoClient
-import pickle
 from kaggle_secrets import UserSecretsClient
 
+
 def add_databases(data_dir):
+    # --- Connect to MongoDB Atlas using Kaggle Secrets ---
     user_secrets = UserSecretsClient()
     uri = user_secrets.get_secret("MONGODB_URI")
-    db_client = MongoClient(uri)  # <-- atlas db, not localhost
+    db_client = MongoClient(uri)
 
-    with open(data_dir + "dep_data.json") as f:
-        dep_data = json.load(f)
+    # --- Load all local data files ---
+    def load_json(path):
+        with open(os.path.join(data_dir, path), "r") as f:
+            return json.load(f)
 
-    with open(data_dir + "paper_goals.pk", "rb") as f:
-        paper_dataset = pickle.load(f)
+    def load_pickle(path):
+        with open(os.path.join(data_dir, path), "rb") as f:
+            return pickle.load(f)
 
-    with open(data_dir + "new_db.json") as f:
-        full_db = json.load(f)
+    dep_data = load_json("dep_data.json")
+    paper_dataset = load_pickle("paper_goals.pk")
+    full_db = load_json("new_db.json")
+    torch_graph_dict = load_pickle("torch_graph_dict.pk")
+    train_test_data = load_pickle("train_test_data.pk")
+    token_enc = load_pickle("graph_token_encoder.pk")  # currently unused
 
-    with open(data_dir + "torch_graph_dict.pk", "rb") as f:
-        torch_graph_dict = pickle.load(f)
-
-    with open(data_dir + "train_test_data.pk", "rb") as f:
-        train_test_data = pickle.load(f)
-
-    with open(data_dir + "graph_token_encoder.pk", "rb") as f:
-        token_enc = pickle.load(f)
-
+    # --- Merge paper goals into full_db ---
     new_db = {v[2]: v for k, v in full_db.items()}
+    for goal_id, plain_expr in paper_dataset:
+        if goal_id in new_db:
+            new_db[goal_id][5] = plain_expr
 
-    for goal in paper_dataset:
-        if goal[0] in new_db:
-            new_db[goal[0]][5] = goal[1]
-
-    with open(data_dir + "adjusted_db.json", "w") as f:
+    # Save adjusted DB
+    with open(os.path.join(data_dir, "adjusted_db.json"), "w") as f:
         json.dump(new_db, f)
 
-    valid_goals = []
-    for goal in paper_dataset:
-        if goal[0] in new_db.keys():
-            valid_goals.append(goal)
-
+    # --- Filter only valid goals ---
+    valid_goals = [g for g in paper_dataset if g[0] in new_db]
     print(f"Len valid {len(valid_goals)}")
     np.random.shuffle(valid_goals)
 
-    with open(data_dir + "valid_goals_shuffled.pk", "wb") as f:
+    with open(os.path.join(data_dir, "valid_goals_shuffled.pk"), "wb") as f:
         pickle.dump(valid_goals, f)
 
-    db_name = "hol4"
-    info_name = "expression_metadata"
-    dep_name = "dependency_data"
-    split_name = "split_data"
-    paper_name = "paper_goals"
-    expression_graph_name = "expression_graphs"
-    vocab_name = "vocab"
+    # --- MongoDB collections ---
+    db = db_client["hol4"]
+    dependency_data = db["dependency_data"]
+    pretrain_data = db["split_data"]
+    paper_split = db["paper_goals"]
+    expression_graph_data = db["expression_graphs"]
+    vocab = db["vocab"]
+    expression_info_data = db["expression_metadata"]
 
-    db = db_client[db_name]
-    dependency_data = db[dep_name]
-    pretrain_data = db[split_name]
-    paper_split = db[paper_name]
-    expression_graph_data = db[expression_graph_name]
-    vocab = db[vocab_name]
-    expression_info_data = db[info_name]
+    print(f"Adding HOL4 standard library data to database 'hol4'...\n")
 
-    print(f"Adding HOL4 standard library data up to and including \"probabilityTheory\" to database {db_name}\n")
-
-    for k, v in tqdm(dep_data.items()):
+    # --- Insert dependency data (safe upsert) ---
+    for k, v in tqdm(dep_data.items(), desc="Dependencies"):
         dependency_data.update_one(
             {"_id": k},
             {"$set": {"dependencies": v}},
             upsert=True
         )
 
+    # --- Insert expression graphs ---
+    for k, v in tqdm(torch_graph_dict.items(), desc="Expression Graphs"):
+        expression_graph_data.update_one(
+            {"_id": k},
+            {"$set": {"data": v}},
+            upsert=True
+        )
 
-    for (k, v) in tqdm(torch_graph_dict.items()):
-        expression_graph_data.insert_one({"_id": k, "data": v})
+    # --- Insert pretrain split data ---
+    train, val, test, _ = train_test_data
+    for split_name, split_data in [("train", train), ("val", val), ("test", test)]:
+        for conj, stmt, y in tqdm(split_data, desc=f"{split_name.capitalize()} Split"):
+            pretrain_data.insert_one({
+                "split": split_name,
+                "conj": conj,
+                "stmt": stmt,
+                "y": y
+            })
 
-    train, val, test, enc_nodes = train_test_data
-
-    for conj, stmt, y in tqdm(train):
-        pretrain_data.insert_one({"split": "train", "conj": conj, "stmt": stmt, "y": y})
-
-    for conj, stmt, y in tqdm(val):
-        pretrain_data.insert_one({"split": "val", "conj": conj, "stmt": stmt, "y": y})
-
-    for conj, stmt, y in tqdm(test):
-        pretrain_data.insert_one({"split": "test", "conj": conj, "stmt": stmt, "y": y})
-
+    # --- Build and insert vocabulary ---
     vocab_dict = {}
     i = 1
     for v in torch_graph_dict.values():
@@ -98,24 +96,38 @@ def add_databases(data_dir):
                 vocab_dict[tok] = i
                 i += 1
 
-    vocab_dict['VAR'] = len(vocab_dict)
-    vocab_dict['VARFUNC'] = len(vocab_dict)
-    vocab_dict['UNK'] = len(vocab_dict)
+    for special in ['VAR', 'VARFUNC', 'UNK']:
+        vocab_dict[special] = len(vocab_dict)
 
-    for k, v in tqdm(vocab_dict.items()):
-        vocab.insert_one({"_id": k, "index": v})
+    for k, idx in tqdm(vocab_dict.items(), desc="Vocabulary"):
+        vocab.update_one({"_id": k}, {"$set": {"index": idx}}, upsert=True)
 
-    with open(data_dir + "vocab.pk", "wb") as f:
+    with open(os.path.join(data_dir, "vocab.pk"), "wb") as f:
         pickle.dump(vocab_dict, f)
 
-    for k, v in tqdm(new_db.items()):
-        expression_info_data.insert_one(
-            {"_id": k, "theory": v[0], "name": v[1], "dep_id": v[3], "type": v[4], "plain_expression": v[5]}
+    # --- Insert expression metadata ---
+    for k, v in tqdm(new_db.items(), desc="Expression Metadata"):
+        expression_info_data.update_one(
+            {"_id": k},
+            {
+                "$set": {
+                    "theory": v[0],
+                    "name": v[1],
+                    "dep_id": v[3],
+                    "type": v[4],
+                    "plain_expression": v[5]
+                }
+            },
+            upsert=True
         )
 
+    # --- Split and insert paper goals ---
     random.shuffle(valid_goals)
-    train_goals = valid_goals[:int(0.8 * len(valid_goals))]
-    val_goals = valid_goals[int(0.8 * len(valid_goals)):]
+    split_point = int(0.8 * len(valid_goals))
+    train_goals = valid_goals[:split_point]
+    val_goals = valid_goals[split_point:]
 
     paper_split.insert_many([{"_id": g[0], "plain": g[1], 'split': 'train'} for g in train_goals])
     paper_split.insert_many([{"_id": g[0], "plain": g[1], 'split': 'val'} for g in val_goals])
+
+    print("Database update complete.")
