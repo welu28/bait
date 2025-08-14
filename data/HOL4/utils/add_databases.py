@@ -68,7 +68,12 @@ def add_databases(data_dir):
     print(f"Adding HOL4 standard library data up to and including \"probabilityTheory\" to database {db_name}\n")
 
     for k, v in tqdm(dep_data.items()):
-        dependency_data.insert_one({"_id": k, "dependencies": v})
+        dependency_data.update_one(
+            {"_id": k},
+            {"$set": {"dependencies": v}},
+            upsert=True
+        )
+
 
     for (k, v) in tqdm(torch_graph_dict.items()):
         expression_graph_data.insert_one({"_id": k, "data": v})
