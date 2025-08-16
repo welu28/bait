@@ -1,0 +1,27 @@
+INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple ../step ../../common
+
+ifdef POLY
+HOLHEAP = arm-step-heap
+EXTRA_CLEANS = $(HOLHEAP) arm-prog-selftest.log
+
+BARE_THYS = ../step/arm_stepLib ../../common/stateLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+all: $(DEFAULT_TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../step/arm-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif
+
+ifeq($(KERNELID),otknl)
+arm_prog.art: arm_prog.otd
+endif
+
+ifdef HOLSELFTESTLEVEL
+# all: arm-prog-selftest.log
+endif
+
+arm-prog-selftest.log: test.sml arm_tests.sml arm_progLib.uo
+	$(tee $(HOLDIR)/bin/hol < test.sml,$@) || ( /bin/rm -f $@ && exit 1 )

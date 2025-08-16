@@ -1,0 +1,26 @@
+OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = selftest.exe selftest.sml \
+               $(wildcard *ML.sig) $(wildcard *ML.sml)
+INCLUDES = ..
+
+# testing SELFTESTLEVEL like this only works in Poly/ML for the moment.
+# when/if github issue 100 (http://github.com/mn200/HOL/issues/100) is
+# implemented, that may change.
+ifdef SELFTESTLEVEL
+ifneq ($(SELFTESTLEVEL),0)
+ifneq ($(SELFTESTLEVEL),1)
+
+all: selftest.exe
+.PHONY: all
+
+selftest.sml: selftest.ML
+	$(CP) $< $@
+
+selftest.exe: selftest.uo armML.uo numML.uo wordsML.uo
+	$(HOLMOSMLC) -o $@ $<
+
+endif
+endif
+endif
+
+all: $(DEFAULT_TARGETS)

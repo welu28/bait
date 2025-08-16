@@ -1,0 +1,2 @@
+ALGEBRA_INCLUDES = field polynomial finitefield
+INCLUDES = $(patsubst %,../../algebra/%,$(ALGEBRA_INCLUDES)) 

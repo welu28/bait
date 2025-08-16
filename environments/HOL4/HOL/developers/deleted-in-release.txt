@@ -1,0 +1,11 @@
+# Uncommented lines below are deleted from the directory that
+# is eventually tarred up to create the release.
+# Deletion is done with /bin/rm -r
+.gitignore
+.github
+Manual
+developers
+examples/dev/sw
+examples/muddy/muddyC/buddy/doc/bddnotes.ps
+examples/muddy/muddyC/buddy/doc/buddy.ps
+examples/pgcl

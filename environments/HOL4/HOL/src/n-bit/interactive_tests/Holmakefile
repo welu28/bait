@@ -1,0 +1,11 @@
+INCLUDES = ..
+
+.PHONY: all
+
+all: test1 $(DEFAULT_TARGETS)
+
+test1: script1.ML ../wordsTheory.uo
+	$(protect $(HOLDIR)/bin/hol) $<
+
+
+EXTRA_CLEANS = test1

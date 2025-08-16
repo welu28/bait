@@ -1,0 +1,2 @@
+INCLUDES=tools deep_embeddings translations model_check examples
+CLINE_OPTIONS = -r

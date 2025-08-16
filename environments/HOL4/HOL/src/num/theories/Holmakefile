@@ -1,0 +1,25 @@
+EXTRA_CLEANS = selftest.exe num-selftest.log
+
+THYCORES = $(patsubst %Script.sml,%,$(wildcard *Script.sml))
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %,%.ot.art,$(THYCORES))
+
+num.art: num.otd
+prim_rec.art: prim_rec.otd
+arithmetic.art: arithmetic.otd
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: num-selftest.log
+
+num-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif

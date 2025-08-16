@@ -1,0 +1,15 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe tactictoe-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: tactictoe-selftest.log
+
+tactictoe-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1, $@)
+
+endif

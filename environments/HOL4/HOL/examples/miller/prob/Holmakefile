@@ -1,0 +1,2 @@
+INCLUDES = ../formalize ../ho_prover ../subtypes ../../Crypto/RSA \
+	   $(HOLDIR)/src/real $(HOLDIR)/examples/probability/legacy

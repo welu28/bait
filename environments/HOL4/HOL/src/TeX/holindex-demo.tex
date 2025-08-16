@@ -1,0 +1,381 @@
+\documentclass{scrartcl}
+
+\usepackage{holindex}
+
+\setHOLlinewidth{80}   %default is 80
+%\setHOLoverrides{over} %option
+
+\begin{document}
+
+\section{Holindex usage}
+
+Similar usage as bibtex, makeindex etc.
+
+\begin{enumerate}
+\item create jobname.tex with header
+\begin{verbatim}
+\usepackage{holindex}
+\setHOLlinewidth{80}   %optional default is 80
+\setHOLoverrides{file} %optional
+\end{verbatim}
+\item make sure that \texttt{holindex} is loaded after packages like
+  \texttt{natbib}, since it loads \texttt{underscore} and this will
+  break commands like \texttt{cite} that get arguments with
+  underscores if they are not properly protected
+\item run \texttt{mkmunge.exe theories} to generate \texttt{munge.exe}
+  for your theories
+\item run latex on jobname.tex to generate jobname.hix
+\item run \texttt{munge.exe -index jobname} to create jobname.tde and jobname.tid
+\item rerun latex to use jobname.tid and jobname.tde
+\item rerun the munger whenever some significant HOL stuff changed
+\item if using emacs with AucTex you might want to add to your \texttt{.emacs}
+\begin{alltt}
+(eval-after-load "tex"
+  '(add-to-list 'TeX-command-list
+    '("Holindex" "munge.exe -index %s"
+       TeX-run-background t t :help "Run Holindex") t))
+\end{alltt}
+\end{enumerate}
+
+
+\section{Defining}
+\begin{verbatim}
+   \defHOLtm{unique_id}{label}{def}
+   \defHOLty{unique_id}{label}{def}
+   \defHOLthm{unique_id}{label}{def}
+
+   (Theorems don't need defining. Theorem IDs of the form
+    theory.name are automatically recognised.
+    The label is their name and the def
+    is stored in the theory. Giving them an extra label
+    will add this label after their name.
+
+    You can define theorems anyhow. This is useful, when
+    - the theorem name is too lengthy / contains special characters
+    - you want to use one theorem with different formating options
+    - you want to add a theorem several times to the index)
+
+   Use the same formating options as the munger
+   \formatHOLtm{unique_id}{options}
+   \formatHOLty{unique_id}{options}
+   \formatHOLthm{unique_id}{options}
+
+   Combine definition and formating
+   \formatDefHOLtm{unique_id}{label}{options}{def}
+   \formatDefHOLty{unique_id}{label}{options}{def}
+
+   Add it explicitly to the index (citations are added automatically)
+   \indexHOLtm{unique_id}
+   \indexHOLty{unique_id}
+   \indexHOLthm{unique_id}
+
+   Print long version in the index
+   \longIndexHOLthm{unique_id}
+   \longIndexHOLty{unique_id}
+   \longIndexHOLtm{unique_id}
+   \shortIndexHOLthm{unique_id}
+   \shortIndexHOLty{unique_id}
+   \shortIndexHOLtm{unique_id}
+
+   Use boolean flags to determine the default
+   \setboolean{holIndexLongTermFlag}{true}
+   \setboolean{holIndexLongTypeFlag}{true}
+   \setboolean{holIndexLongThmFlag}{false}
+
+   Add comments in the index
+   \commentHOLtm{unique_id}{comment}
+   \commentHOLty{unique_id}{comment}
+   \commentHOLthm{unique_id}{comment}
+\end{verbatim}
+%
+Definitions like these inside a latex file are tedious,
+especially for long terms. I strongly recommend using
+an external file for all these definitions. There
+is a construct
+\begin{verbatim}
+   \useHOLfile{filename}
+\end{verbatim}
+that parses files in a syntax similar to BibTex.
+Printout of \texttt{holindex-demo.hdf}:
+
+\begin{verbatim}
+@Term{term_id_4,
+   label = "a short description of term form external file",
+   force_index,
+   options = "width=20",
+   content = ``SOME_FUN = SUC a < 0 /\ 0 > SUC b``
+}
+
+@Type{type_id_4,
+   label = "a short description of the type from external file",
+   force_index,
+   short-index,
+   content = ``:bool``
+}
+
+
+@Thm{arithmetic.LESS_SUC_EQ_COR,
+   force-index,
+   long-index,
+   latex = "My latex code for \texttt{LESS_SUC_EQ_COR}"
+}
+
+@Thm{arithmetic.LESS_EQ_0,
+   force-index, long-index
+}
+
+@Thm{thm_1,
+   label = "(second instance)",
+   content = "arithmetic.LESS_SUC_EQ_COR",
+   options = "width=20",
+   comment = "some lengthy\\comment
+
+              with \textbf{formats} and newlines",
+   force-index,
+   long-index
+}
+
+@Theorems{
+   ids = [arithmetic.LESS_ADD_SUC,
+          arithmetic.LESS_EQ*],
+   force-index
+}
+\end{verbatim}
+
+
+%use external file
+\useHOLfile{holindex-demo.hdf}
+
+%or define inline (recommended only for short, simple ones)
+\defHOLtm{term_id_1}{The first term}{SUC a > 0 /\ X > 2}
+\defHOLtm{term_id_2}{The second term}{SUC a < 0 /\ X > 3}
+\defHOLty{type_id_1}{The first type}{:bool}
+\defHOLty{type_id_2}{The second type}{:num}
+\formatDefHOLtm{term_width_5}{Test term width=5}{width=5}{SUC a > 0 /\ X > 2}
+\formatDefHOLtm{term_width_10}{Test term width=10}{width=10}{SUC a > 0 /\ X > 2}
+\formatDefHOLtm{term_width_50}{Test term width=50}{width=50}{SUC a > 0 /\ X > 2}
+
+
+
+\section{Printing}
+
+\begin{verbatim}
+   Print inline
+   \inlineHOLtm{id}
+   \inlineHOLty{id}
+   \inlineHOLthm{id}
+
+   Print as block
+   \blockHOLtm{id}
+   \blockHOLty{id}
+   \blockHOLthm{id}
+
+   Use def without encapsulation (seldom useful)
+   \useHOLtm{id}
+   \useHOLty{id}
+   \useHOLthm{id}
+\end{verbatim}
+
+\subsection{Block Examples}
+\begin{itemize}
+\item Example 1 \blockHOLtm{term_width_5}
+\item Example 2 \blockHOLtm{term_width_10}
+\item Example 3 \blockHOLtm{term_width_50}
+\item Example 4 \blockHOLthm{arithmetic.DIVMOD_THM}
+\end{itemize}
+
+
+\subsection{Inline Examples}
+\begin{itemize}
+\item Example 1 \inlineHOLtm{term_width_5}
+\item Example 2 \inlineHOLtm{term_width_10}
+\item Example 3 \inlineHOLtm{term_width_50}
+\item Example 4 \inlineHOLthm{arithmetic.DIVMOD_THM}
+\end{itemize}
+
+
+
+\section{Citing}
+
+\begin{verbatim}
+   Pure numbers
+   \citePureHOLtm{id}
+   \citePureHOLty{id}
+   \citePureHOLthm{id}
+
+   Single citations
+   \citeHOLtm{id}
+   \citeHOLty{id}
+   \citeHOLthm{id}
+
+   Multiple citations
+   \mciteHOLtm{id,id,...}
+   \mciteHOLty{id,id,...}
+   \mciteHOLthm{id,id,...}
+
+   Hidden citations (adds page to index,
+      but does not print anything)
+   \citeHiddenHOLtm{id}
+   \citeHiddenHOLty{id}
+   \citeHiddenHOLthm{id}
+
+
+   Printing Index
+   \printHOLIndex
+   \printShortHOLIndex
+   \printLongHOLIndex
+
+   Sort the index by occurence in the text, not by names
+   \sortHOLIndexOccurence
+\end{verbatim}
+
+Sometimes, it might be tiresome to write a lengthy theory name over and over again.
+One can easily define printing and citing commands for theorems of a specific
+theory by e.\,g.:
+\begin{verbatim}
+\newcommand{\citeMyTheorythm}[1]{\citeHOLthm{lengthyTheoryName.#1}}
+\end{verbatim}
+It is a little bit trickier to get the same effect for citation lists. There is however,
+a version of \texttt{mciteHOLthm} that accepts a theorem prefix:
+\begin{verbatim}
+\newcommand{\mciteMyTheorythm}[1]{\mciteHOLthmPrefix{lengthyTheoryName.}{#1}}
+\end{verbatim}
+
+If you are using many theorem citations it might become tricky to keep track of what you are citing.
+There is a debug flag that prints the theorem name as well as it's index number. To use it, add the following
+line to the header of your file:
+\begin{verbatim}
+\setboolean{holThmCiteDebug}{true}
+\end{verbatim}
+
+
+\section{Printing}
+There are some macros just concerned with the resulting output.
+One can adapt these easily to personal preferences. Here the standard
+definitions are printed. Just copy them to the header of your file
+and modify them to your taste:
+
+\begin{verbatim}
+The environment for printing something as a
+block and the inline command (found in holtexbasic.sty):
+\renewcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
+\renewenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
+
+Format of citations
+\renewcommand[\protect]{\citeHOLthm}[1]{(HOL-Thm~\citePureHOLthm{#1})}
+\renewcommand[\protect]{\citeHOLtm}[1]{(HOL-Term~\citePureHOLtm{#1})}
+\renewcommand[\protect]{\citeHOLty}[1]{(HOL-Type~\citePureHOLty{#1})}
+
+\renewcommand[\protect]{\mciteHOLthmPrefix}[2]
+   {(HOL-Thms~\foreach{\citePureHOLthmPrefix{#1}}{, }{#2})}
+\renewcommand[\protect]{\mciteHOLtm}[1]
+   {(HOL-Terms~\foreach{\citePureHOLtm}{, }{#1})}
+\renewcommand[\protect]{\mciteHOLty}[1]
+   {(HOL-Types~\foreach{\citePureHOLty}{, }{#1})}
+
+
+How theorem names are printed in the index
+\renewcommand{\HOLThmName}[1]{{\tt{}#1}}
+
+Headers in the index
+\rewenvironment{HOLTermIndex}{\section*{HOL-Term Index}}{}
+\renewenvironment{HOLTypeIndex}{\section*{HOL-Type Index}}{}
+\renewenvironment{HOLThmIndex}{\section*{HOL-Theorem Index}}{}
+\renewcommand{\HOLThmIndexTheory}[1]{\subsection*{#1Theory}}
+\end{verbatim}
+\pagebreak
+\begin{verbatim}
+Much more complicated: Index entries themselves
+% Arg 1 : number in the index
+% Arg 2 : unique ID
+% Arg 3 : Label
+% Arg 4 : Pages
+% Arg 5 : Long index?
+% Arg 6 : is the pages argument non-empty?
+% Arg 7 : comment
+% Arg 8 : latex printed version of theorem/type/term
+\renewcommand{\HOLIndexEntryFormat}[8]{%
+   \makebox[0.1\textwidth][r]{(#1)\ }%number
+   \begin{minipage}[t]{0.9\textwidth}%everything else in minibox
+      \begin{flushright}#3 \ldots$\!$\dotfill #4\end{flushright}{%first line
+      \ifthenelse{\(\not\boolean{holShortIndexFlag}\) \and %use short or
+                  \(\boolean{#5} \or \boolean{holLongIndexFlag}\)}% long version
+          {#7\begin{blockHOL}#8\end{blockHOL}\medskip}%long version
+          {}% else short version
+     }%end if-then-else
+   \end{minipage}\\}
+
+
+And index entries for the theorems, types and terms using this definition
+
+% Arg 1 : unique ID
+% Arg 2 : Label
+% Arg 3 : Pages
+% Arg 4 : Long index?
+% Arg 5 : is the pages argument non-empty?
+% Arg 6 : comment
+% Arg 7 : latex printed version of theorem/type/term
+\renewcommand{\HOLThmIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holThmCounter}}{thm@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\renewcommand{\HOLTypeIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTypeCounter}}{type@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\renewcommand{\HOLTermIndexEntryFormat}[7]{%
+   \HOLIndexEntryFormat{\arabic{holTermCounter}}{term@#1}{#2}{#3}{#4}{#5}{#6}{#7}%
+}
+\end{verbatim}
+
+
+
+\section{Some citing to fill the index}
+
+\citeHOLthm{arithmetic.LESS_SUC_EQ_COR}
+\citeHOLtm{term_id_1}
+\citeHOLty{type_id_2}
+
+\mciteHOLthm{arithmetic.LESS_SUC_EQ_COR,prim_rec.INV_SUC_EQ,arithmetic.LESS_SUC_EQ_COR}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+
+\pagebreak
+
+\citeHOLthm{prim_rec.INV_SUC_EQ}
+\citeHOLthm{arithmetic.PRE_SUC_EQ}
+\citeHOLthm{list.list_repfns}
+
+\longIndexHOLthm{arithmetic.PRE_SUC_EQ}
+\shortIndexHOLty{type_id_2}
+\commentHOLty{type_id_4}{Some short comment}
+
+%Sort index by occurence
+%\sortHOLIndexOccurence
+
+\setboolean{holIndexLongTermFlag}{false}
+
+
+\section{Long Index}
+\printLongHOLIndex
+
+\pagebreak
+\section{Index}
+\printHOLIndex
+
+\pagebreak
+\section{Short Index}
+\printShortHOLIndex
+
+
+\end{document}

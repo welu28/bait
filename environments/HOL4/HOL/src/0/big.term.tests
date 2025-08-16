@@ -1,0 +1,171 @@
+(*===========================================================================
+    Testing term construction and destruction for big terms
+
+    When the terms get bigger, various things barf, like the
+    prettyprinter, and the naive way of doing list_mk_conj:
+
+      itlist (curry mk_conj) vlist tm
+
+    blows the stack, so things have to be made tail recursive.
+ ===========================================================================*)
+
+fun upto f b t =
+  let fun up i acc = if i < t then up (i+1) (f i::acc) else rev acc
+  in up b []
+  end;
+
+val vars10 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 10;
+val vars100 = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100;
+val vars1K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 1000;
+val vars10K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 10000;
+val vars50K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 50000;
+val vars100K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 100000;
+val vars500K = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 500000;
+val vars1M = upto (fn i => mk_var("v"^Int.toString i, bool)) 0 1000000;
+
+val body10 = time list_mk_conj vars10;
+val body100 = time list_mk_conj vars100;
+val body1K = time list_mk_conj vars1K;
+max_print_depth := 10;
+val body10K = time list_mk_conj vars10K;
+val body50K = time list_mk_conj vars50K;
+val body100K = time list_mk_conj vars100K;
+val body500K = time list_mk_conj vars500K;
+val body1M = time list_mk_conj vars1M;   (* 9 secs *)
+
+val list_mk_abs    = Term.list_mk_abs;
+val list_mk_forall = boolSyntax.list_mk_forall;
+
+val abs10   = (time list_mk_abs(vars10,body10); ());
+val abs100  = (time list_mk_abs(vars100,body100); ());
+val abs1K   = (time list_mk_abs(vars1K,body1K); ());
+val abs10K  = (time list_mk_abs(vars10K,body10K); ());
+val abs100K = (time list_mk_abs(vars100K,body100K); ());
+val abs500K = (time list_mk_abs(vars500K,body500K); ());
+val abs1M   = (time list_mk_abs(vars1M,body1M); ());
+
+val ALL10 =   (time list_mk_forall(vars10,body10); ());
+val ALL100 =  (time list_mk_forall(vars100,body100); ());
+val ALL1K =   (time list_mk_forall(vars1K,body1K); ());
+val ALL10K =  (time list_mk_forall(vars10K,body10K); ());
+val ALL100K = (time list_mk_forall(vars100K,body100K); ());
+val ALL500K = (time list_mk_forall(vars500K,body500K); ());
+val ALL1M =   (time list_mk_forall(vars1M,body1M); ());
+
+val dabs10  = let val abs10 = list_mk_abs(vars10,body10)
+               in time Term.strip_abs abs10 ; () end;
+val dabs100 = let val abs100 = list_mk_abs(vars100,body100)
+               in time Term.strip_abs abs100 ; () end;
+val dabs1K  = let val abs1K = list_mk_abs(vars1K,body1K)
+              in time Term.strip_abs abs1K ; () end;
+val dabs10K  = let val abs10K = list_mk_abs(vars10K,body10K)
+               in time Term.strip_abs abs10K ; () end;
+val dabs100K = let val abs100K = list_mk_abs(vars100K,body100K)
+               in time Term.strip_abs abs100K ; () end;
+val dabs100K' = let val abs100K' = list_mk_abs(vars10K,body100K)
+                in list_mk_abs(Term.strip_abs abs100K') ~~ abs100K' end;
+val dabs500K = let val abs500K = list_mk_abs(vars500K,body500K)
+               in time Term.strip_abs abs500K ; () end;
+val dabs1M   = let val abs1M = time list_mk_abs(vars1M,body1M)
+                in time Term.strip_abs abs1M ; () end;
+
+fun old_list_mk_abs(V,t) = itlist(curry mk_abs) V t;
+fun old_list_mk_forall(V,t) = itlist(curry mk_forall) V t;
+
+val old_abs10 = (time old_list_mk_abs(vars10,body10); ());
+val old_abs100 = (time old_list_mk_abs(vars100,body100); ());
+val old_abs1K = (time old_list_mk_abs(vars1K,body1K); ());
+val abs10K = (time old_list_mk_abs(vars10K,body10K);());
+(* After this, it's too slow *)
+val abs100K = (time old_list_mk_abs(vars100K,body100K); ());
+val abs500K = (time old_list_mk_abs(vars500K,body500K); ());
+val abs1M = time old_list_mk_abs(vars1M,body1M);
+
+(* ---------------------------------------------------------------------------
+       Some renaming checks
+ --------------------------------------------------------------------------- *)
+
+val x = mk_var("x",bool)
+val x' = mk_var("x'",bool)
+val x'' = mk_var("x''",bool)
+val x''' = mk_var("x'''",bool)
+val x'''' = mk_var("x''''",bool)
+val y = mk_var("y",bool);
+val z = mk_var("z",bool);
+
+strip_abs(beta_conv(Term `(\^x ^y. x) y`));
+strip_abs(beta_conv(Term `(\^y ^x' ^x. y) x`));
+strip_abs(beta_conv(Term `(\^y ^x ^x'. y) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x ^x ^x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x') x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x' /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ x' /\ x /\ x /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x. y /\ !x. y /\ x) x`));
+strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
+
+(* Note:
+
+   - strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
+   > val it = ([`x''''`, `x'''`, `x'''''`, `x''`, `x'`], `x`)
+
+but
+
+   - beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`);
+   > val it = `\x'''' x''' x' x'' x'. x`
+
+The strip_abs only renames one bound variable to sort out the clash,
+while the step-by-step version is different: it ends up with an
+apparent shadow in the resulting scope. This isn't a bug, because the shadow
+doesn't bind anything, but still, doesn't seem quite right.
+
+In any case, the strip_abs result and the step-by-step result are different,
+which may cause some things to break, or some puzzlement.
+
+Another example:
+
+mk_abs(x,(beta_conv(Term `(\^y  ^x. y /\ x) x`)));
+strip_abs it;
+
+mk_abs(x,beta_conv(mk_comb(mk_abs(z,
+mk_abs(x,(beta_conv(Term `(\^y  ^x. y /\ x /\ z) x`)))),x)));
+strip_abs it;
+
+*)
+
+
+(*---------------------------------------------------------------------------
+    dribble used to develop list_mk_binder
+
+fun enumerate [] _ acc = acc
+  | enumerate (h::t) i acc = enumerate t (i+1) ((h,i)::acc);
+
+fun mk_varmap vlist =
+ let open Polyhash
+    val vmap :(term,int) hash_table = mkPolyTable(length vlist, Fail "varmap")
+    val addin = insert vmap
+ in app addin (enumerate (rev vlist) 0 [])
+  ; vmap
+ end;
+
+fun max i [] = i
+  | max i (h::t) = max (if h>i then h else i) t;
+
+val varmap10 = mk_varmap vars10;
+val varmap100 = mk_varmap vars100;
+val varmap1K = mk_varmap vars1K;
+val varmap10K = mk_varmap vars10K;
+val varmap100K = mk_varmap vars100K;
+val varmap500K = mk_varmap vars500K;
+val varmap1M = mk_varmap vars1M;
+
+Polyhash.listItems varmap 10;
+
+max 0 (Polyhash.bucketSizes varmap10);    (* 1 *)
+max 0 (Polyhash.bucketSizes varmap100);   (* 2 *)
+max 0 (Polyhash.bucketSizes varmap1K);    (* 3 *)
+max 0 (Polyhash.bucketSizes varmap10K);   (* 4 *)
+max 0 (Polyhash.bucketSizes varmap100K);  (* 4 *)
+max 0 (Polyhash.bucketSizes varmap1M);    (* 5 *) (* tweaking? *)
+
+ ---------------------------------------------------------------------------*)

@@ -1,0 +1,3 @@
+This is the "help/theorygraph" directory for HOL.  A theory dependency
+graph will be placed here when you build HOL (provided the Graphviz
+dot tool, cf. http://www.graphviz.org/, is available on your system).

@@ -1,0 +1,69 @@
+val _ = app load ["wordsLib", "stringLib", "SHA1Theory"];
+
+(*---------------------------------------------------------------------------*)
+(* Run SHA-1. It's very slow.                                                *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Count.apply EVAL ``stringMD "abc"``;;
+val _ = Count.apply EVAL ``stringMD "abcdef"``;;
+
+(*
+  val _ = loadPath := (!Globals.emitMLDir) :: !loadPath;
+  val _ = load "sha1ML"; open sha1ML listML stringML;
+  val _ =  load "Timing"; open Timing;
+
+  val _ = Meta.installPP numML.ppHex;
+
+  fun SHAlist L = 
+    let open wordsML
+        val (w0,(w1,(w2,(w3,(w4,(w5,(w6,(w7,(w8,(w9,(w10,(w11,(w12,(w13,
+            (w14,(w15,(w16,(w17,(w18,w19))))))))))))))))))) = computeMD L
+        val w0' = w2n w0
+        val w1' = w2n w1
+        val w2' = w2n w2
+        val w3' = w2n w3
+        val w4' = w2n w4
+        val w5' = w2n w5
+        val w6' = w2n w6
+        val w7' = w2n w7
+        val w8' = w2n w8
+        val w9' = w2n w9
+        val w10' = w2n w10
+        val w11' = w2n w11
+        val w12' = w2n w12
+        val w13' = w2n w13
+        val w14' = w2n w14
+        val w15' = w2n w15
+        val w16' = w2n w16
+        val w17' = w2n w17
+        val w18' = w2n w18
+        val w19' = w2n w19
+    in   
+     (w0',w1',w2',w3',w4',w5',w6',w7',w8',w9',
+      w10',w11',w12',w13',w14',w15',w16',w17',w18',w19')
+    end;
+
+  val SHAstring = SHAlist o string_to_w8_list;
+
+     SHAstring "abc";
+     (* = (A9,99,3E,36,47,6,81,6A,BA,3E,25,71,78,50,C2,6C,9C,D0,D8,9D) *)
+     SHAstring "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+     (* = (84,98,3E,44,1C,3B,D2,6E,BA,AE,4A,A1,F9,51,29,E5,E5,46,70,F1) *)
+
+  fun chars s top = 
+    let val (SOME c) = Char.fromString s
+        val w8 = wordsML.toWord8 (ORD c)
+        fun loop n acc = if n >= top then acc else loop (n+1) (w8::acc)
+    in loop 0 []
+    end;
+
+   (* linear but slow *)
+   val _ = time SHAlist (chars "a" 10);
+   val _ = time SHAlist (chars "a" 100);
+   val _ = time SHAlist (chars "a" 1000); (* 6.7 sec *)
+   val _ = time SHAlist (chars "a" 10000); (* 65.6 sec *)
+   val _ = time SHAlist (chars "a" 100000); (* 653.4 sec *)
+   val _ = time SHAlist (chars "a" 1000000); (* 6522.27 sec *)
+   (* =  (34,AA,97,3C,D4,C4,DA,A4,F6,1E,EB,2B,DB,AD,27,31,65,34,1,6F) *)
+
+*)

@@ -1,0 +1,276 @@
+# this -*- shell-script -*- can be used to create a HOL tar ball.
+
+set -e
+
+die () {
+  echo "$@" >&2
+  exit 1
+}
+
+warn () {
+    echo "$@" >&2
+}
+
+case `uname` in
+    Darwin ) if [ -z `which gtar` ]
+             then
+                die "Need GNU tar on MacOS"
+             else
+                 TAR=gtar
+             fi
+             if [ -x "/usr/local/opt/gnu-getopt/bin/getopt" ]
+             then
+                 PATH="/usr/local/opt/gnu-getopt/bin":$PATH
+             elif [ -x "/opt/homebrew/opt/gnu-getopt/bin/getopt" ]
+             then
+                 PATH="/opt/homebrew/opt/gnu-getopt/bin":$PATH
+             else
+                 die "Need GNU getopt in /usr/local/opt/gnu-getopt/bin or /opt/homebrew/opt/gnu-getopt/bin (use brew)"
+             fi ;;
+    * ) TAR=tar
+esac
+
+
+
+usage () {
+  echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] [--copyconfig] <ref> <ML>" >&2
+  echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
+  echo "  <ML> is a path to mosml or poly" >&2
+  echo "  Use -Lpath to add library paths for Poly" >&2
+  echo "  Use --relname=<name> to give the release a name other than <ref>" >&2
+  echo "  Use --reuse-checkout to reuse local checkout of <ref>" >&2
+  echo "  Use --copyconfig to use local config-override file" >&2
+  exit 1
+}
+
+reusecommit=0
+TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -lcopyconfig -- "$@")
+eval set -- "$TEMP"
+
+while true
+do
+    case "$1" in
+        --reuse-checkout ) reusecommit=1 ; shift 1 ;;
+        --relname ) userrelname=$2 ; shift 2 ;;
+        --copyconfig ) copylconfig=1 ; shift 1 ;;
+        -- ) shift ; break ;;
+        * ) die "Internal getopt error!" ;;
+    esac
+done
+
+if [ $# -ne 2 ]
+then
+    usage
+fi
+gitref=$1
+if [ "$userrelname" ]
+then
+    releasename=$userrelname
+else
+    releasename=$gitref
+fi
+ML=$2
+
+MLbase=$(basename $ML)
+[ $MLbase = mosml ] || [ $MLbase = poly ] ||
+  die "MLs supported are Poly/ML and Moscow ML"
+
+localholdir="`dirname $0`/.."
+localholdir=$(cd $localholdir ; pwd)
+echo "Local HOL directory: $localholdir"
+
+cd $localholdir
+
+if [ -d /tmp/localhol -a "${reusecommit}" -eq 1 ]
+then
+    :
+else
+  /bin/rm -rf /tmp/localhol
+  echo -n "Cloning into /tmp - "
+  (git clone -q ./ /tmp/localhol && echo "done" || die "failed")
+fi
+
+if [ "${copylconfig}" ]
+then
+    if [ $MLbase = mosml ]
+    then
+        config="$localholdir/config-override"
+        if [ -r "$config" ]
+        then
+            echo "Copying $config into new tmp HOL dir"
+            /bin/cp $config /tmp/localhol/
+        else
+            die "No local config: $config"
+        fi
+    else
+        config="$localholdir/tools-poly/poly-includes.ML"
+        if [ -r "$config" ]
+        then
+            echo "Copying $config into new tmp HOL dir"
+            /bin/cp $config /tmp/localhol/tools-poly
+        else
+            die "No local config: $config"
+        fi
+    fi
+fi
+
+
+cd /tmp/localhol
+localholdir=/tmp/localhol
+
+echo -n "Switching to ${gitref} - "
+(git checkout -f -q ${gitref} && echo "done" || die "failed")
+if [ "${reusecommit}" -eq 1 -a -f "${localholdir}/bin/hol.state" ]
+then
+    :
+else
+    $ML < tools/smart-configure.sml
+    bin/build
+fi
+
+texlogs=/tmp/$releasename-latex-logs
+
+createdir () {
+  if mkdir $1 2> /dev/null
+  then
+      :
+  else
+    if /bin/rm -rf $1 2> /dev/null
+    then
+        mkdir $1
+    else
+        die "Couldn't create directory $1"
+    fi
+  fi
+}
+
+# initial setup
+createdir $texlogs
+archive=/tmp/hol-$releasename
+/bin/rm -rf $archive                     # final directory to be tarred
+
+if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
+then
+    :
+else
+    die "Local HOL directory looks bogus"
+fi
+
+
+echo "Archiving from $localholdir to $archive"
+git archive --prefix="hol-$releasename/" $gitref | ${TAR} -x -C /tmp
+
+if [ ! -r $archive/std.prelude -o ! -d $archive/src ]
+then
+    die "git archive doesn't seem to have worked"
+fi
+
+echo -n "Copying various theorems from local installation: "
+for i in coretypes/pair-help res_quan/help string/help
+do
+  echo -n "$i "
+  if /bin/cp -R $localholdir/src/$i/thms $archive/src/$i 2> /dev/null
+  then
+      :
+  else
+      echo
+      die "Couldn't find theorems for $i"
+  fi
+done
+echo
+
+echo "Copying theory graph from local installation"
+# see the file help/src-sml/DOT for instructions on how to generate the
+# theorygraph files
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* $archive/help/theorygraph 2> /dev/null ||
+  die "Couldn't copy theory graph."
+
+if [ $ML = "mosml" ]
+then
+    echo "Running configure script"
+    cd $archive
+    $ML < tools/smart-configure.sml > /tmp/$release-config-log 2>&1
+    if [ $? -ne 0 ] ; then
+        echo "HOL configuration failed, consult /tmp/$release-config.log" ; exit 1
+    fi
+fi
+
+echo "Copying help/Docfiles/{*.txt,mdhash,HTML/*.html}"
+/bin/cp $localholdir/help/Docfiles/*.txt $archive/help/Docfiles ||
+  die "Couldn't copy *.txt"
+/bin/cp $localholdir/help/Docfiles/mdhash $archive/help/Docfiles ||
+  die "Couldn't copy mdhash"
+/bin/cp $localholdir/help/Docfiles/HTML/*.html $archive/help/Docfiles/HTML ||
+  die "Couldn't copy HTML/*.html"
+
+echo ; echo Building documentation
+for man_name in Description Developers Interaction-emacs Logic Quick Reference Tutorial
+do
+    lcname=$(echo $man_name | tr A-Z a-z)
+    echo -n "  $man_name"
+    cd ${localholdir}/Manual/$man_name
+    if [ -f Holmakefile ]
+    then
+        MAKE=$localholdir/bin/Holmake
+    else
+        MAKE=make
+    fi
+    if ${MAKE} $lcname.pdf > $texlogs/$man_name.log 2>&1 < /dev/null
+    then :
+    else echo Build failed - see $texlogs/$man_name.log ; exit 1
+    fi
+    mv $lcname.pdf /tmp/$releasename-$lcname.pdf
+    echo " -> /tmp/$releasename-$lcname.pdf"
+done
+
+echo ; echo Cleaning up
+cd $archive
+while read line
+do
+  case "$line" in
+      \#* ) : ;;
+      * ) (/bin/rm -r $line 2> /dev/null && echo "  Removed $line") ||
+        warn "  *** Couldn't delete $line ***"
+  esac
+done < $localholdir/developers/deleted-in-release.txt
+echo "Removed files listed for deletion; now removing .gitignore files"
+find . -name '.gitignore' -delete
+
+echo
+
+if [ $ML = "mosml" ]
+then
+    /bin/rm tools/Holmake/*.{uo,ui} tools/hol-mode.el
+    /bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
+    /bin/rm tools/Holmake/Holmake_tokens.sml
+    (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
+    (cd tools/mlyacc/mlyacclib ; ../../../bin/Holmake cleanAll)
+    (cd tools/mlyacc/src ; ../../../bin/Holmake cleanAll)
+    (cd sigobj ; /bin/rm Systeml.{uo,ui})
+    (cd tools/mllex ; ../../bin/Holmake cleanAll)
+    (cd help/src-sml ; ../../bin/Holmake cleanAll)
+    cd bin
+    echo "Cleaning bin/"
+    /bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs /bin/rm
+fi
+
+cd /tmp
+
+# catch and replace release date placeholder
+date=$(date '+%d %B %Y')
+perl -i -pe "s/xxxxxx/$date/" $archive/doc/$releasename.release.md
+
+echo "Creating tar file"
+${TAR} czf hol-$releasename.tar.gz $(basename $archive)
+echo
+
+echo -n "Release notes in "
+mv $archive/doc/$releasename.release.md . ||
+  die "No release notes for $releasename in doc directory"
+
+echo -n "$(pwd)/$releasename.release.md"
+
+pandoc -t html5 -c index.css -s $releasename.release.md -o $releasename.release.html ||
+  die "Failed to run pandoc successfully"
+
+echo " and $(pwd)/$releasename.release.html"

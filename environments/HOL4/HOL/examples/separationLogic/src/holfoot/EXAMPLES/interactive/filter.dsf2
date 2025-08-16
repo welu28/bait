@@ -1,0 +1,33 @@
+list_filter(l;x) [data_list(l,data)] {
+  local y, z, e;
+  y = l;
+  z = NULL;
+  loop_spec [data_list (y, data2) * 
+             (if (y != l) then 
+                data_lseg (l, data, z) * (z |-> tl:y,dta:#zdata))] {
+    while (y != NULL) {
+      e = y->dta;
+      if(e == x) { /* need to remove y */
+        if(y == l) { /* first link */
+          l = y->tl;
+          dispose y;
+          y = l;
+        } else { /* not first link */
+          e = y->tl;
+          z->tl = e;
+          dispose y;
+          y = z->tl;
+        }
+      } else { /* don't need to remove y */
+        z = y;
+        y = y->tl;
+      }
+    }
+  } [if (old(y) == old(l)) then
+       data_list(l, ``FILTER (\n. ~(n = x)) data2``)
+     else
+       (data_list(l, ``data ++ [zdata] ++ (FILTER (\n. ~(n = x)) data2)``))]
+} [data_list(l, ``FILTER (\n. ~(n = x)) data``)]
+
+
+

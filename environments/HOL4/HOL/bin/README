@@ -1,0 +1,2 @@
+This is the "bin" directory for HOL. A collection of executable files (hol,
+Holmake, etc.) will be placed here when you build HOL.

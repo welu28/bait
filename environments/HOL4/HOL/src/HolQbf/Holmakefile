@@ -1,0 +1,16 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+mkholqbf: holqbf.uo
+	$(HOLMOSMLC) -o $@ $<
+holqbf.o: mkholqbf
+	./$<
+holqbf: holqbf.o
+	cc -static -o $@ $< -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread -lgmp
+EXTRA_CLEANS=holqbf.o mkholqbf holqbf selftest.exe

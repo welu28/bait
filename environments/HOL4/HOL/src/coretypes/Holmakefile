@@ -1,0 +1,25 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+one.art: one.otd
+sum.art: sum.otd
+pair.art: pair.otd
+option.art: option.otd
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+
+selftest.log: selftest.exe
+	./selftest.exe > $@ 2>&1
+
+all: selftest.log
+endif
+
+EXTRA_CLEANS = selftest.log selftest.exe

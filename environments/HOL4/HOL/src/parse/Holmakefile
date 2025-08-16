@@ -1,0 +1,37 @@
+EXTRA_CLEANS = base_lexer.sml
+
+SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
+                $(dprot $(SIGOBJ)/Overlay.uo) \
+                $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: base_lexer.sml selftest.exe $(UOFILES)
+
+.PHONY: all
+
+base_lexer.sml: base_lexer
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) base_lexer
+
+base_lexer.uo: base_tokens.uo MLstring.uo
+
+LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml $(dprot $(SIGOBJ)/HolKernel.ui)
+	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) -toplevel -c $<
+
+Overload.ui: Overload.sig LVTermNetFunctor.ui
+	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) LVTermNetFunctor.ui -c $<
+
+Overload.uo: Overload.sml Overload.ui $(dprot $(SIGOBJ)/Lexis.ui) $(dprot $(SIGOBJ)/HOLset.ui) LVTermNetFunctor.ui $(dprot $(SIGOBJ)/stmonad.ui) GrammarSpecials.ui
+	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) LVTermNetFunctor.ui -c $<
+
+selftest.exe: selftest.uo $(SELFTEST_DEPS)
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS += selftest.exe parse-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: parse-selftest.log
+
+parse-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

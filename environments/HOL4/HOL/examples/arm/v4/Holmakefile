@@ -1,0 +1,33 @@
+INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/emit
+
+EXTRA_CLEANS = armParser.lex.sig armParser.lex.sml\
+        armParser.grm.sig armParser.grm.sml armParser.grm.desc\
+	armParser.grm-sig.sml
+
+MLYACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe)
+
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+armParser.grm.sml armParser.grm-sig.sml: armParser.grm
+	$(MLYACC) $<
+	$(MV) armParser.grm.sig armParser.grm-sig.sml
+
+armParser.grm-sig.uo: armParser.grm-sig.sml
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+armParser.grm.uo : armParser.grm.sml armParser.grm-sig.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) armParser.grm-sig.ui $<
+
+armParser.lex.sml : armParser.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+armParser.lex.uo: armParser.lex.sml
+	$(HOLMOSMLC) -toplevel -c Data.ui armParser.grm-sig.ui $<
+
+assemblerML.uo: assemblerML.sml assemblerML.ui \
+                armParser.grm.uo armParser.lex.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) armParser.grm.ui armParser.lex.ui $<

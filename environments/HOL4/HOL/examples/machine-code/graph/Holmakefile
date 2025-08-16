@@ -1,0 +1,54 @@
+INCLUDES = $(HOLDIR)/examples/l3-machine-code/common \
+           $(HOLDIR)/examples/l3-machine-code/arm/model \
+           $(HOLDIR)/examples/l3-machine-code/m0/model \
+           $(HOLDIR)/examples/l3-machine-code/riscv/model \
+           $(HOLDIR)/examples/l3-machine-code/arm/step \
+           $(HOLDIR)/examples/l3-machine-code/m0/step \
+           $(HOLDIR)/examples/l3-machine-code/riscv/step \
+           $(HOLDIR)/examples/l3-machine-code/arm/prog \
+           $(HOLDIR)/examples/l3-machine-code/m0/prog \
+           $(HOLDIR)/examples/l3-machine-code/riscv/prog \
+           $(HOLDIR)/examples/l3-machine-code/arm/decompiler \
+           $(HOLDIR)/examples/l3-machine-code/m0/decompiler \
+           $(HOLDIR)/examples/l3-machine-code/riscv/decompiler \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+ifdef POLY
+HOLHEAP = local-hol-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe mcgraph-selftest.log
+
+BARE_THYS = $(HOLDIR)/examples/l3-machine-code/common/utilsLib \
+            $(HOLDIR)/examples/l3-machine-code/common/stateTheory \
+            $(HOLDIR)/examples/l3-machine-code/common/temporal_stateTheory \
+            $(HOLDIR)/examples/l3-machine-code/common/tripleLib \
+            $(HOLDIR)/examples/l3-machine-code/arm/prog/arm_progLib \
+            $(HOLDIR)/examples/l3-machine-code/m0/prog/m0_progLib \
+            $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+endif
+
+ifeq ($(KERNELID),otknl)
+all: machine-code-straightline-unint.art
+
+machine-code-straightline-unint.art: machine-code-straightline-unint.thy straightline.ot.art GraphLang.ot.art
+	opentheory info --article -o $@ $<
+
+GraphLang.art: GraphLang.otd
+endif
+
+selftest.exe: selftest.uo decompileLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: mcgraph-selftest.log
+
+mcgraph-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+endif

@@ -1,0 +1,117 @@
+(*---------------------------------------------------------------------------
+       Mapping finite sets into lists. Needs a constraint that 
+       the set is finite. One might think to introduce this 
+       function via a constant specification, but in this case, 
+       TFL technology makes an easy job of it.
+
+       Also, we define a "fold" for sets. Could be used for accumulating
+       function values through a set, e.g., summing a finite set of 
+       numbers.
+ ---------------------------------------------------------------------------*)
+
+app load ["bossLib", "pred_setTheory"]; 
+open pred_setTheory bossLib; 
+infix 8 by;
+
+(*---------------------------------------------------------------------------
+       Make definition of set2list function.
+ ---------------------------------------------------------------------------*)
+
+val set2list_defn = Hol_defn "set2list"
+  `set2list s = 
+     if FINITE s then 
+        if s={} then []
+        else CHOICE s :: set2list (REST s) 
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of set2list.
+ ---------------------------------------------------------------------------*)
+
+val (set2list_eqn0, set2list_ind) =
+ Defn.tprove (set2list_defn,
+   WF_REL_TAC `measure CARD` THEN 
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      FINITE s |- set2list s = if s = {} then [] 
+                               else CHOICE s::set2list (REST s)
+
+ ---------------------------------------------------------------------------*)
+
+val set2list_eqn = ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] set2list_eqn0;
+
+
+(*---------------------------------------------------------------------------
+      Map a list into a set.
+ ---------------------------------------------------------------------------*)
+
+val list2set = 
+ Define 
+   `(list2set []     = {}) 
+ /\ (list2set (h::t) = h INSERT (list2set t))`;
+
+
+(*---------------------------------------------------------------------------
+            Some consequences
+ ---------------------------------------------------------------------------*)
+
+val set2list_inv = Q.prove
+(`!s. FINITE s ==> (list2set(set2list s) = s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
+   THEN RW_TAC std_ss [list2set]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, CHOICE_INSERT_REST]);
+
+val set2list_CARD = Q.prove
+(`!s. FINITE s ==> (LENGTH (set2list s) = CARD s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
+   THEN RW_TAC std_ss [listTheory.LENGTH,CARD_EMPTY]
+   THEN RW_TAC std_ss [REST_DEF, FINITE_DELETE]
+   THEN `FINITE (REST s)` by PROVE_TAC [REST_DEF,FINITE_DELETE]
+   THEN PROVE_TAC[CHOICE_INSERT_REST,CARD_INSERT,CHOICE_NOT_IN_REST,REST_DEF]);
+
+val set2list_IN_MEM = Q.prove
+(`!s. FINITE s ==> !x. x IN s = MEM x (set2list s)`,
+ recInduct set2list_ind
+   THEN RW_TAC std_ss [] 
+   THEN ONCE_REWRITE_TAC [set2list_eqn]
+   THEN RW_TAC std_ss [listTheory.MEM,NOT_IN_EMPTY]
+   THEN PROVE_TAC [REST_DEF, FINITE_DELETE, IN_INSERT, CHOICE_INSERT_REST]);
+
+
+(*---------------------------------------------------------------------------
+    A "fold" operation for sets ... unfortunately, totally useless, 
+    since CHOICE and REST don't actually give you things you can work
+    with.
+ ---------------------------------------------------------------------------*)
+
+val itset_defn = Hol_defn "itset"
+  `itset (s:'a->bool) (b:'b) = 
+     if FINITE s then 
+        if s={} then b
+        else itset (REST s) (f (CHOICE s) b)
+     else ARB`;
+
+(*---------------------------------------------------------------------------
+       Termination of itset.
+ ---------------------------------------------------------------------------*)
+
+val (itset_eqn0, itset_ind) =
+ Defn.tprove (itset_defn,
+   WF_REL_TAC `measure (CARD o FST)` THEN 
+   PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+
+(*---------------------------------------------------------------------------
+      Desired recursion equation.
+
+      FINITE s |- itset f s b = if s = {} then b 
+                                else itset f (REST s) (f (CHOICE s) b)
+ ---------------------------------------------------------------------------*)
+
+val itset_eqn = ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] itset_eqn0;

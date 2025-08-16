@@ -1,0 +1,59 @@
+INCLUDES= .. $(HOLDIR)/src/bag $(HOLDIR)/src/HolSmt $(HOLDIR)/src/string
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
+               holfoot.lex.sml holfoot.grm.sig
+
+all: $(DEFAULT_TARGETS) holfootLib.ui selftest.exe
+.PHONY: all clean-lib
+
+selftest.exe: selftest.uo ../treeSyntax.uo ../vars_as_resourceFunctor.uo \
+              $(HOLDIR)/src/HolSmt/HolSmtLib.uo holfootLib.uo holfootLib.ui \
+              $(HOLDIR)/src/finite_maps/finite_mapLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+Parsetree.uo : Parsetree.sml
+	$(HOLMOSMLC) -c Parsetree.sml
+
+holfoot.grm.sml holfoot.grm-sig.sml: holfoot.grm Parsetree.uo
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+	$(MV) holfoot.grm.sig holfoot.grm-sig.sml
+
+holfoot.grm-sig.uo: holfoot.grm-sig.sml Parsetree.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+holfoot.grm.uo: holfoot.grm.sml holfoot.grm-sig.uo Parsetree.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm-sig.ui $<
+
+holfoot.lex.sml: holfoot.lex Parsetree.uo
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+holfoot.lex.uo: holfoot.lex.sml Parsetree.uo
+	$(HOLMOSMLC) -toplevel -c Parsetree.uo holfoot.grm-sig.ui $<
+
+AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui holfoot.grm.uo holfoot.lex.uo Parsetree.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
+
+holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo \
+   holfootParserGenpreds.ui holfootParserGenpreds.uo holfoot_pp_print.uo \
+   holfootTheory.uo $(HOLDIR)/src/bag/bagLib.uo \
+   $(HOLDIR)/src/finite_maps/finite_mapLib.uo \
+   $(HOLDIR)/src/sort/permLib.uo \
+   $(HOLDIR)/src/string/stringSimps.uo \
+   ../vars_as_resourceBaseFunctor.ui ../vars_as_resourceFunctor.ui \
+   ../treeSyntax.uo
+	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -I .. -I $(HOLDIR)/src/bag -I $(HOLDIR)/src/HolSmt -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo vars_as_resourceBaseFunctor.ui vars_as_resourceFunctor.uo Overlay.ui holfootLib.sml
+
+hfheader.uo: hfheader.sml
+
+
+clean-lib:
+	rm -f holfootLib.uo holfootLib.ui
+
+ifdef HOLSELFTESTLEVEL
+all: holfoot-selftest.log
+
+holfoot-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+endif

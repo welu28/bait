@@ -1,0 +1,2 @@
+INCDIRS = bag string finite_maps
+INCLUDES = $(patsubst %,$(dprot $(HOLDIR)/src/%),$(INCDIRS))

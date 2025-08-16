@@ -1,0 +1,27 @@
+INCLUDES = ../.. ../model $(HOLDIR)/examples/machine-code/hoare-triple
+
+ifdef POLY
+HOLHEAP = x64-heap
+EXTRA_CLEANS = $(HOLHEAP) x64-steplib-selftest.log
+
+BARE_THYS = ../model/x64Lib ../model/x64AssemblerLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): ../../l3-heap $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b $< -o $(HOLHEAP) $(BARE_THYS)
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: x64-steplib-selftest.log
+
+x64-steplib-selftest.log: ../../common/testscript.ML x64_stepLib.uo
+	tmp=`mktemp "$${TMPDIR:-.}/stepLibXXXX"` && TESTLIB=x64_stepLib $(protect $(HOLDIR)/bin/hol) < $< > $$tmp && $(MV) $$tmp $@
+
+endif

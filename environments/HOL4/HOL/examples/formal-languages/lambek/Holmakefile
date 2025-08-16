@@ -1,0 +1,27 @@
+INCLUDES = $(dprot $(HOLDIR)/src/integer) $(HOLDIR)/src/TeX
+
+EXTRA_CLEANS = heap munge.exe selftest.exe
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = UnicodeChars pred_setTheory arithmeticTheory pairTheory relationTheory
+DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(DEFAULT_TARGETS) munge.exe
+
+MUNGE_DEPS = LambekTheory CutFreeTheory ExampleTheory
+
+munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS)) $(HOLDIR)/bin/mkmunge.exe
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif
+
+.PHONY: all

@@ -1,0 +1,3 @@
+INCLUDES = milawa-prover/soundness-thm
+
+CLINE_OPTIONS = -r

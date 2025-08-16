@@ -1,0 +1,27 @@
+INCLUDES = ../decompiler \
+           ../compiler \
+           ../hoare-triple \
+           $(HOLDIR)/tools/mlyacc/mlyacclib \
+           ../instruction-set-models/common \
+           ../instruction-set-models/x86
+OPTIONS=QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = local-hol-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../decompiler/decompilerLib \
+            ../compiler/compilerLib \
+            ../instruction-set-models/x86/prog_x86Lib \
+            ../instruction-set-models/x86/prog_x86Theory
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+endif

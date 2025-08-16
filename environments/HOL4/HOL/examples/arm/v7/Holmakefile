@@ -1,0 +1,16 @@
+INCLUDES = $(HOLDIR)/src/n-bit $(HOLDIR)/src/integer $(HOLDIR)/src/update
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo armLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+armv7-selftest.log: selftest.exe
+	@$(tee ./$<, $@)
+
+all: armv7-selftest.log
+endif
+
+EXTRA_CLEANS = armv7-selftest.log selftest.exe

@@ -1,0 +1,71 @@
+Bugs fixed:
+-----------
+  * The arithmetic decision procedure embedded in the simplifier was
+    adding too much context in some cases, and thereby failing to
+    prove goals that were really within its scope.
+  * pred_setLib was failing to load.
+  * It was impossible to redefine constants using IndDefLib.  Now this
+    is possible, though it is still a little tricky, because one needs
+    to hide the constant being redefined from the parser (using
+    "hide") to be able to generate a term where the name of the
+    constant corresponds to a variable.
+  * The datatype axiom produced by Hol_datatype was slightly wrong in
+    its choice of type variables when type variables in the definition
+    appeared underneath a type operator.  Thanks to Trent Larson for
+    discovery and fix of this bug.
+  * A library module (Canon.sml) was not using a fixed grammar for its
+    invocation of the parser as it loaded, causing buggy behaviour in
+    some circumstances.  Thanks to Dan Zhou for finding those obscure
+    circumstances.
+  * Similarly, temporalLib was not using a fixed grammar, causing it
+    to load badly in circumstances when integers were around.  Thanks
+    to Kong Woei Susanto for finding this one.
+
+New features:
+-------------
+  * The list of constants known to the parser is now stored on a per
+    grammar basis.  The functions hide and reveal affect the global
+    grammar, but if one switches to a different grammar instead, this
+    grammar's notion of what should be treated as a constant takes
+    precedence.  This is useful where one wants to parse over a
+    certain set of known constants, and not have parses go awry
+    because the logical context has actually been extended with new
+    constants.
+  * The set theories (pred_setTheory and setTheory) have been extended
+    with treatments of BIGUNION (union of a set of sets) and set
+    cross-product.  A variety of new theorems about these and
+    treatments of finiteness have been added as well.
+  * Holmake can now be run in "fast mode".  This mode of operation
+    causes the prove and store_thm functions to call mk_thm rather
+    than evaluate tactics.  This can dramatically speed up the
+    rebuilding of theories.  Of course, this is unsound, and marked as
+    such with the "fast_proof" oracle tag.
+  * Holmake now runs by default in a mode where if a tactic fails to
+    prove a goal, an error message is printed and the goal is asserted
+    anyway (again with an oracle tag).  This means that the rest of a
+    development can be checked even though something may fail early
+    on.  Holmake's old behaviour is available if the --qof (the TLA
+    stands for "quit on failure") flag is give at the command-line.
+  * If code uses prove, and it is not appropriate for failures to be
+    caught in the above ways when Holmake runs, the function
+    Tactical.default_prover can be used instead; this provides the
+    default implementation for prove, and can't be changed by other
+    tools.
+  * The emacs mode now has a configurable variable
+    (hol-echo-commands-p), which controls whether or not the text sent
+    to the HOL buffer is echoed or not.  The default is for it not to
+    be echoed.
+  * Setting up overloading does not now require a preliminary call to
+    allow_for_overloading_on.  In fact, this latter function no longer
+    exists.  Overloading is now done solely with the function
+    overload_on, which has much the same semantics as before, but is
+    not constrained by a "base type" that the user is forced to know
+    about in advance.
+
+New theories:
+-------------
+  * A basic development of probability theory (measurable sets etc)
+    due to Joe Hurd.
+
+New tools:
+----------

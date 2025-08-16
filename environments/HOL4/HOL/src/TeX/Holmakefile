@@ -1,0 +1,76 @@
+EXE = mkmunge.exe
+TARGET = $(protect $(HOLDIR)/bin/$(EXE))
+
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+EXTRA_CLEANS = munger.lex.sml $(EXE) mkmunge.o munger.o $(TARGET) \
+               holindex.grm-sig.sml holindex.grm.sml holindex.lex.sig \
+               holindex.lex.sml holindex.grm.sig selftest.exe tex-selftest.log
+
+mosml_MKMUNGE_DEP = mkmkmunge.uo mungeTools.uo warning_stream.uo
+poly_MKMUNGE_DEP = poly-mkmkmunge.ML mkmkcline.sml \
+                   $(dprot $(HOLDIR)/bin/hol.state) \
+                   EmitTeX.uo mungeTools.uo
+
+mosml_MKMUNGE_COMM = $(HOLMOSMLC) -o $@ $<
+poly_MKMUNGE_COMM = $(POLYC) $< -o $@
+
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: selftest.exe $(TARGET) $(UOFILES)
+.PHONY: all
+
+ifdef POLY
+$(TARGET): poly-mkmkmunge.ML $(dprot $(HOLDIR)/bin/buildheap)
+	$(protect $(HOLDIR)/bin/buildheap) --poly $<
+else
+$(TARGET): $($(ML_SYSNAME)_MKMUNGE_DEP)
+	$($(ML_SYSNAME)_MKMUNGE_COMM)
+endif
+
+munger.lex.sml: munger.lex
+	$(MLLEX) $<
+
+munger.lex.ui munger.lex.uo: munger.lex.sml mungeTools.ui
+	$(HOLMOSMLC-C) -toplevel $<
+
+mkmunger.uo: mkmunger.sml munger.lex.ui
+	$(HOLMOSMLC-C) munger.lex.ui $<
+
+holindex.lex.sml: holindex.lex holindexData.uo
+	$(MLLEX) $<
+
+holindex.lex.ui holindex.lex.uo: holindex.lex.sml holindexData.uo
+	$(HOLMOSMLC) -toplevel -c holindex.grm-sig.ui $<
+
+holindex.grm-sig.ui holindex.grm-sig.uo: holindex.grm-sig.sml holindexData.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+holindex.grm.sml holindex.grm-sig.sml: holindex.grm holindexData.uo
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+	$(MV) holindex.grm.sig holindex.grm-sig.sml
+
+holindex.grm.ui holindex.grm.uo: holindex.grm.sml holindex.grm-sig.uo holindexData.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm-sig.ui $<
+
+AssembleHolindexParser.uo: AssembleHolindexParser.sml AssembleHolindexParser.ui holindex.grm.uo holindex.lex.uo holindexData.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm.ui holindex.lex.ui $<
+
+selftest.exe: selftest.uo EmitTeX.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: tex-selftest.log
+
+tex-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+endif
+
+ifdef HOLBUILD
+all: link-to-sigobj
+.PHONY: link-to-sigobj
+link-to-sigobj: $(DEFAULT_TARGETS)
+	$(HOL_LNSIGOBJ)
+endif

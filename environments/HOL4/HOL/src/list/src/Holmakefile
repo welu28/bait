@@ -1,0 +1,27 @@
+ifdef POLY
+HOLHEAP = ../../num/termination/numheap
+endif
+
+EXTRA_CLEANS = selftest.exe list-selftest.log
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo rich_listTheory.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifeq($(KERNELID),otknl)
+
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *.sml))
+
+list.art: list.otd
+
+endif
+
+ifdef HOLSELFTESTLEVEL
+all: list-selftest.log
+
+list-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1, $@)
+
+endif

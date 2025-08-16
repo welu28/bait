@@ -1,0 +1,13 @@
+INCLUDES = $(HOLDIR)/examples/balanced_bst \
+           $(HOLDIR)/examples/formal-languages \
+           $(HOLDIR)/examples/formal-languages/context-free \
+           $(HOLDIR)/src/search
+
+all: $(DEFAULT_TARGETS) regexp2dfa
+
+.PHONY: all
+
+EXTRA_CLEANS = regexp2dfa.o regexp2dfa
+
+regexp2dfa : regexp2dfa.uo
+	$(protect $(HOLDIR)/bin/buildheap) regexp2dfa.uo -o $@ --exe main

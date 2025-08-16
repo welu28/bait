@@ -1,0 +1,38 @@
+(* this is an -*- sml -*- file *)
+val _ = HOL_Interactive.toggle_quietdec();
+
+val _ = loadPath :=
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src"]) ::
+            (concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot"]) ::
+            !loadPath;
+
+val _ = map load ["holfootParser", "holfoot_pp_print", "holfootLib"];
+open holfootParser;
+open holfoot_pp_print;
+open holfootLib;
+
+open separationLogicTheory vars_as_resourceTheory holfootTheory generalHelpersTheory;
+
+use (Globals.HOLDIR ^ "/tools/editor-modes/emacs/hol-mode.sml");
+
+val _ = Feedback.set_trace "Unicode" 0;
+val _ = Feedback.set_trace "PPBackEnd use annotations" 0;
+val _ = Feedback.set_trace "PPBackEnd use styles" 1;
+val _ = Feedback.set_trace "PPBackEnd show types" 0;
+val _ = Feedback.set_trace "metis" 0;
+
+val examplesDir =
+    concat [Globals.HOLDIR,
+            "/examples/separationLogic/src/holfoot/EXAMPLES"];
+
+
+(*testing*)
+val _ = holfoot_auto_verify_spec (examplesDir ^ "/automatic/list.sf")
+val _ = holfoot_verify_spec (examplesDir ^ "/automatic/mergesort.sf") [];
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+(* save state *)
+val state_file = "holfoot.state"
+val _ = PolyML.SaveState.saveState state_file;

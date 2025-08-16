@@ -1,0 +1,45 @@
+ifdef POLY
+TARGET = $(dprot $(HOLDIR)/bin/hol.state0)
+
+BOOLTHEORY = $(dprot $(SIGOBJ)/boolTheory.uo)
+BOOLLIB = $(dprot $(SIGOBJ)/boolLib.uo)
+PRIMREC = $(dprot $(SIGOBJ)/Prim_rec.uo)
+TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
+
+DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
+       proofManagerLib.uo History.uo \
+       goalStack.uo goalTree.uo Manager.uo \
+       $(dprot $(SIGOBJ)/UnicodeChars.uo) \
+       $(dprot $(SIGOBJ)/ThmSetData.uo) \
+       $(dprot $(SIGOBJ)/Pmatch.uo) \
+       $(dprot $(SIGOBJ)/TypeBasePure.uo) \
+       $(dprot $(SIGOBJ)/TypeBase.uo) \
+       $(dprot $(SIGOBJ)/Preterm.uo) \
+       $(dprot $(SIGOBJ)/type_pp.uo) \
+       $(dprot $(SIGOBJ)/parse_term.uo) \
+       $(dprot $(SIGOBJ)/ParseExtras.uo) \
+       $(dprot $(SIGOBJ)/Drule.uo) \
+       $(dprot $(SIGOBJ)/TheoryPP.uo) \
+       $(dprot $(SIGOBJ)/Conv.uo) \
+       $(dprot $(SIGOBJ)/Tactic.uo) \
+       $(dprot $(SIGOBJ)/Tactical.uo) \
+       $(dprot $(SIGOBJ)/ParseDatatype.uo) \
+       $(dprot $(SIGOBJ)/type_grammar.uo) \
+       $(dprot $(SIGOBJ)/Symtab.uo) \
+       $(dprot $(SIGOBJ)/Inttab.uo) \
+       $(dprot $(SIGOBJ)/KNametab.uo) \
+       $(dprot $(SIGOBJ)/term_tokens.uo) \
+       $(dprot $(SIGOBJ)/DB.uo) \
+       $(dprot $(HOLDIR)/bin/buildheap)
+
+UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
+         $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
+         $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
+	 $(protect $(SIGOBJ)/ThmSetData)
+
+EXTRA_CLEANS = $(TARGET)
+
+$(TARGET): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) --poly -o $@ $(UOARGS)
+
+endif

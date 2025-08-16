@@ -1,0 +1,3 @@
+INCLUDES = .. ../../../string ../../../res_quan/src
+
+EXTRA_CLEANS = variable.lst

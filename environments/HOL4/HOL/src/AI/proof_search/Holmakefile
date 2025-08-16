@@ -1,0 +1,14 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe ai-proof-search-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: ai-proof-search-selftest.log
+
+ai-proof-search-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
+endif

@@ -1,0 +1,20 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+
+.PHONY: all
+
+ifdef POLY
+HOLHEAP = ../num/termination/numheap
+endif
+
+selftest.exe: selftest.uo patternMatchesSyntax.uo patternMatchesTheory.uo patternMatchesLib.uo constrFamiliesLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe pattern-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: pattern-selftest.log
+
+pattern-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1, $@)
+
+endif

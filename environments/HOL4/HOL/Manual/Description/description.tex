@@ -1,0 +1,155 @@
+% =====================================================================
+% HOL Manual LaTeX Source: description
+% =====================================================================
+
+\documentclass[12pt,fleqn]{book}
+\usepackage[notindex]{tocbibind}
+
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsbsy}
+\usepackage{amsthm}
+\usepackage{bbm} % for \mathbbm{1}
+\usepackage{imakeidx}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+\usepackage{../LaTeX/proof}
+\usepackage{supertabular}
+
+\usepackage{../../src/TeX/holtexbasic}
+\usepackage{fancyvrb}
+\usepackage[format=hang,justification=raggedright]{caption}  % multi-line figure caption
+\usepackage{desc-unicode}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{etoolbox} % For patchcmd
+
+% Remove top and bottom horizontal lines from tables:
+\newlength{\toprulewidth}
+\setlength{\toprulewidth}{0.ex}
+\patchcmd{\toprule}{\heavyrulewidth}{\toprulewidth}{}{}
+
+\newlength{\bottomrulewidth}
+\setlength{\bottomrulewidth}{0.ex}
+\patchcmd{\bottomrule}{\heavyrulewidth}{\bottomrulewidth}{}{}
+
+
+
+\hyphenation{docu-ments}
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+\input{../LaTeX/commands}
+
+%\includeonly{title,contents,preface,ML,logic,semantics,system,drules,conv,see}
+
+%\includeonly{title,contents,preface,ML,logic,semantics,system,drules,conv,index,see}
+%\includeonly{title,contents,preface,ML}
+%\includeonly{tactics}
+%\includeonly{preface,ack}
+%\includeonly{logic,semantics}
+%\includeonly{system,theories,libraries}
+
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\hypersetup{
+  pdftitle={The HOL System DESCRIPTION},
+  pdfauthor={The HOL4 contributors},
+  pdfsubject={HOL4},
+  pdfkeywords={Interactive Theorem Proving; Higher Order Logic},
+  pdfdisplaydoctitle=true
+}
+
+\usepackage{breakurl} % it depends on hyperref
+
+\usepackage{centernot}
+\newcommand{\notiff}{\nLeftrightarrow}
+
+\theoremstyle{definition}
+\newtheorem{definition}[equation]{Definition}
+
+
+\makeindex[intoc]
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
+
+   \include{title}                        % description title page
+   \include{preface}                      % preface to entire description
+   \input{../LaTeX/ack}                   % global acknowledgements
+   \tableofcontents                       % table of contents
+
+
+%   \cleardoublepage
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}                  % start at page 1
+
+   % ---------------------------------------------------------------------
+   % part 1: The HOL Logic
+   % ---------------------------------------------------------------------
+
+   % now in separate LOGIC manual
+
+   % \part{The HOL Logic \label{HOL-logic}}
+
+   % \include{logic}                       % Syntax and informal semantics
+   % \include{semantics}                   % formal semantics
+
+   % ---------------------------------------------------------------------
+   % part 2: The HOL System
+   % ---------------------------------------------------------------------
+
+   % \part{The HOL System \label{HOL-SYS}}
+
+   \include{system}                      % embedding HOL logic in ML
+   \include{drules}                      % derived rules
+   \include{conv}                        % conversions
+   \include{tactics}                     % tactics
+   \include{theories}
+   \include{math}                        % math theories
+   \include{definitions}
+   \include{libraries}
+   \include{modern-syntax-chapter}
+   \include{misc}
+
+   % ---------------------------------------------------------------------
+   % part 3: Theorem Proving with HOL
+   % ---------------------------------------------------------------------
+
+   %\part{Theorem Proving with HOL}       % new part
+
+%   \include{syntax}
+%   \include{see}
+
+   % ---------------------------------------------------------------------
+   % references to entire description
+   % ---------------------------------------------------------------------
+
+   % The "plainnat" style will show also the DOI and URL, etc.
+   \bibliographystyle{plainnat}
+   \bibliography{description}
+
+   % ---------------------------------------------------------------------
+   % Index
+   % ---------------------------------------------------------------------
+
+\index{modern syntax@``modern syntax''|see{special syntactic forms for scripts}}
+
+\small
+\emergencystretch=14pt
+\printindex
+
+\end{document}

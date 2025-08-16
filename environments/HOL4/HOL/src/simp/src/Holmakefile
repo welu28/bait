@@ -1,0 +1,14 @@
+EXTRA_CLEANS = selftest.exe simp-selftest.log
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo boolSimps.uo Cond_rewr.uo simpLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: simp-selftest.log
+
+simp-selftest.log: selftest.exe
+	$(tee ./selftest.exe,$@)
+endif

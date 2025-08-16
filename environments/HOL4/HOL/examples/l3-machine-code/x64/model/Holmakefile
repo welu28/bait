@@ -1,0 +1,7 @@
+INCLUDES = ../../common ../../lib
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+x64.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo x64.sml x64.ui
+	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui x64.sml

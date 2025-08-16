@@ -1,0 +1,65 @@
+% =====================================================================
+% HOL Manual LaTeX Source: pair library (standard latex style)
+% =====================================================================
+
+\documentclass[12pt]{book}
+\usepackage{charter}
+\usepackage{fleqn}
+\usepackage{alltt}
+\usepackage{../../..//Manual/LaTeX/layout}
+\usepackage[T1]{fontenc}
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+\input{../../../Manual/LaTeX/commands}
+\input{../../../Manual/LaTeX/ref-macros}
+
+% ---------------------------------------------------------------------
+% The document has an index
+% ---------------------------------------------------------------------
+\usepackage{makeidx}
+\makeindex
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{roman}                  % roman page numbers for prelims
+   \setcounter{page}{1}                   % start at page 1
+
+   \include{title} % title page \tableofcontents % table of contents
+
+   % ---------------------------------------------------------------------
+   % Systematic description of the library
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{arabic} % arabic page numbers \setcounter{page}{1} %
+   \include{description}
+
+   % ---------------------------------------------------------------------
+   % Reference manual entries for functions
+   % ---------------------------------------------------------------------
+
+   \include{entries}
+
+   % ---------------------------------------------------------------------
+   % Listing of theorems
+   % ---------------------------------------------------------------------
+
+   \include{theorems}
+
+   % ---------------------------------------------------------------------
+   % Index
+   % ---------------------------------------------------------------------
+
+   {\def\_{{\char'137}}                  % \tt style `_' character
+
+     \printindex}
+
+ \end{document}

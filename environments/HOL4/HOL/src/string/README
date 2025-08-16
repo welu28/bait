@@ -1,0 +1,54 @@
++ =====================================================================	+
+|									|
+| LIBRARY	: string						|
+|									|
+| DESCRIPTION   : definition of logical types for characters and        |
+|		  and strings of characters.				|
+|									|
+| AUTHOR	: K. Slind						|
+| DATE		: 11.02.01  						|
+| =====================================================================	+
+
+
++ --------------------------------------------------------------------- +
+|									|
+| FILES:								|
+|									|
++ --------------------------------------------------------------------- +
+
+    stringLib.{sig,sml}    Load all string functionality. Includes
+                           conversions for character equality,
+                           and string equality, as well as a conversion
+                           for proving instances of 
+
+                               ORD (CHAR m) = m
+
+
+    stringScript.sml       Creates the theory of character strings
+
+    stringSyntax.{sig,sml} Derived syntax operations for characters 
+                           and strings.
+
+    stringSimps.sml        Simplification set for strings, to be used
+                           by simpLib rewriters (also found in bossLib).
+
++ --------------------------------------------------------------------- +
+|									|
+| TO REBUILD THE LIBRARY:						|
+|									|
++ --------------------------------------------------------------------- +
+
+   1) invoke "Holmake" as a shell command
+
+
++ --------------------------------------------------------------------- +
+|									|
+| TO USE THE LIBRARY:							|
+|									|
++ --------------------------------------------------------------------- +
+
+   1) type 
+
+       load "stringLib";
+
+      into an interactive session of HOL.

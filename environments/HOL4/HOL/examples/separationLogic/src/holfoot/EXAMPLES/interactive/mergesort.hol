@@ -1,0 +1,87 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
+*)
+
+
+HOL_Interactive.toggle_quietdec();
+
+open sortingTheory;
+
+HOL_Interactive.toggle_quietdec();
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+val SORTED_CONS_IMP = prove (``!R x xs.
+  (SORTED R (x::xs) ==> SORTED R xs)``,
+Cases_on `xs` THEN SIMP_TAC list_ss [SORTED_DEF])
+
+val transitive_LE = prove (``transitive (($<=): num -> num -> bool)``,
+SIMP_TAC arith_ss [relationTheory.transitive_def]);
+
+val LESS_LESS_EQ2 = prove (``!n1 n2 n3:num. (n1 < n2 /\ n2 <= n3) ==> (n1 <= n3)``,
+DECIDE_TAC)
+val LESS_LESS_EQ3 = prove (``!n1 n2 n3:num. (~(n1 < n2) /\ n1 <= n3) ==> (n2 <= n3)``,
+DECIDE_TAC);
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/mergesort.dsf"];
+
+val merge_TAC_0 = 
+HF_ELIM_COMMENTS_TAC THEN
+REPEAT STRIP_TAC THENL [
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (pdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC,
+
+   IMP_RES_TAC SORTED_CONS_IMP,
+
+   FULL_SIMP_TAC arith_ss [SORTED_EQ, transitive_LE] THEN
+   `!y. MEM y rdata = MEM y (qdata_h::(pdata_t ++ qdata_t))` by
+      METIS_TAC[PERM_MEM_EQ] THEN
+   ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
+   REPEAT STRIP_TAC THEN
+   RES_TAC THEN
+   DECIDE_TAC
+];
+
+val mergesort_gen_step_opt = combined_gen_step_tac_opt [
+    add_rewrites [SORTED_DEF, PERM_REFL],
+    add_ssfrags [permLib.PERM_ss] ];
+
+(* holfoot_set_goal_procedures file ["merge"] *)
+val merge_TAC =
+   xHF_CONTINUE_TAC [mergesort_gen_step_opt, generate_vcs] THEN
+   merge_TAC_0;
+
+val _ = holfoot_tac_verify_spec file 
+                (SOME [careful, generate_vcs, mergesort_gen_step_opt]) 
+                [("merge", merge_TAC)]
+
+
+(******************************************************************************)
+(* try the parallel one - exactly the same proof                              *)
+(******************************************************************************)
+
+val file_parallel = concat [examplesDir, "/interactive/mergesort_parallel.dsf"];
+
+
+val _ = holfoot_tac_verify_spec file_parallel
+                (SOME [careful, generate_vcs, mergesort_gen_step_opt]) 
+                [("merge", merge_TAC)]
+

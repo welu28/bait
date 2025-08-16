@@ -1,0 +1,23 @@
+EXTRA_CLEANS = selftest.exe arith-selftest.log
+BOOLLIB = $(dprot $(SIGOBJ)/boolLib.ui)
+NUMTHY = $(dprot $(SIGOBJ)/numeralTheory.uo)
+
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe : selftest.uo numSimps.uo Gen_arith.uo Arith.uo
+	$(HOLMOSMLC) -o $@ $<
+
+GenRelNorm.uo: GenRelNorm.sml $(BOOLLIB)
+	$(HOLMOSMLC) -toplevel -c Overlay.ui $<
+
+NumRelNorms.uo: NumRelNorms.sml NumRelNorms.ui GenRelNorm.uo \
+                GenPolyCanon.uo $(BOOLLIB) $(NUMTHY)
+	$(HOLMOSMLC) -c Overlay.ui GenRelNorm.ui $<
+
+ifdef HOLSELFTESTLEVEL
+all: arith-selftest.log
+
+arith-selftest.log: selftest.exe
+	$(tee ./$<,$@)
+endif

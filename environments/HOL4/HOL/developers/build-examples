@@ -1,0 +1,132 @@
+#!/bin/sh
+
+# A shell script to build the various examples distributed with HOL.
+# These represent a valuable regression test.  At the moment, those tests
+# that don't use Holmake can fail without this script being able to notice.
+# The developer has to watch the output and check that everything looks
+# reasonable.
+
+holmake=`pwd`/../bin/Holmake
+
+toplevel () {
+  ../bin/hol < autopilot.sml
+  ../bin/hol < euclid.sml
+  ../bin/hol < fol.sml
+  ../bin/hol < root2.sml
+  ../bin/hol < Thery.sml
+}
+
+simple_example () {
+  pushd $1
+  $holmake cleanAll
+  if $holmake --qof
+  then
+    echo Done Example $1
+    popd
+  else
+    echo "***** Failed in $1"
+    popd
+    exit 1
+  fi
+}
+
+MLsyntax () { simple_example MLsyntax; }
+ind_def ()  { simple_example ind_def; }
+lambda ()   { simple_example lambda; }
+arm6 ()     { simple_example arm6; }
+PSL ()      { simple_example PSL/1.1; }
+ring ()     { ../bin/hol < ring.sml; }
+
+bmark () {
+  cd bmark
+  ./run_bmark ../../bin/hol.bare
+  cd ..
+}
+
+parity () {
+  cd parity
+  ../../bin/hol < PARITY.sml
+  cd ..
+}
+
+elliptic () {
+  cd elliptic
+  ../../bin/hol < elliptic.sml
+  cd ..
+}
+
+miller () {
+  cd miller
+  ./m clean
+  ./m
+  cd ..
+}
+
+Crypto () {
+  cd Crypto
+  for i in AES IDEA MARS RC6 TEA TWOFISH
+  do
+      cd $i
+      $holmake cleanAll
+      $holmake
+      cd ..
+  done
+  cd ..
+}
+
+fast () {
+    for i in toplevel MLsyntax ind_def lambda bmark parity elliptic
+    do
+        buildit $i
+    done
+}
+
+buildit () {
+  logfile=/tmp/example-build-log-$1
+  echo "Building $1 - output in $logfile"
+  eval $1 | tee /tmp/example-build-log-$1
+}
+
+check_cwd () {
+  if [ -f Thery.sml -a -f README -a -f fol.sml -a -d miller ]
+  then
+     :
+  else
+     return 1
+  fi
+}
+
+
+if check_cwd
+then
+   :
+else
+   echo "This doesn't look like the examples directory; please cd there and"
+   echo "try again."
+   exit 1
+fi
+
+if [ $# -eq 0 ]
+then
+    echo Building all examples
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity elliptic \
+             miller arm6 Crypto PSL
+    do
+        buildit $i
+    done
+else
+    while [ $# -gt 0 ]
+    do
+      arg=`basename $1 .sml`   # use of basename strips trailing slashes from
+                               # inputs of the form   dirname/ and .sml
+                               # from ring.sml and others we may wish to use
+      buildit $arg
+      shift
+    done
+fi
+
+
+
+# Local variables:
+# mode: shell-script
+# end:

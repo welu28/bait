@@ -1,0 +1,72 @@
+Main files:
+
+complex_rationalScript.sml ...... Script to build theory of complex rationals
+sexp.sml ........................ Version of sml for compiling
+sexp.ml ......................... Tool for interactively processing one ACL2 defun
+acl2_packageScript.sml .......... Script to build and validate package specification
+sexpScript.sml .................. Script to build theory of s-expressions
+kpa-v2-9-3.ml ................... Package structure specification (generated from ACL2)
+defaxioms.lisp.trans.ml ......... ACL2 generated version of axioms.lisp
+hol_defaxiomsScript.sml ......... HOL definitions of functions in defaxioms
+hol_defaxioms_proofsScript.sml .. HOL proofs of axioms in defaxioms
+hol_defaxioms_thmsScript.sml .... HOL proofs of theorems in defaxioms
+translateScript.sml ............. Proofs of HOL-ACL2 relationships
+encodeLib.sml ................... Automatically encodes HOL theorems to s-expressions
+load_sexp.ml .................... Loads sexp and sexpTheory
+make_defaxioms.ml ............... Makes defaxiomsTheory from lisp/defaxioms.lisp.trans.ml
+Holmakefile ..................... Specifies how to build defaxiomsTheory
+
+Notes
+-----
+
+translateScript creates and runs a .lisp script containing proofs 
+that the functions defined are equivalent to those in ACL2. The 
+variables acl2_executable and acl2_test_file point to the locations
+of the acl2 executable and script file.
+
+The role of defaxiomsTheory, which is built by Holmake (see
+Holmakefile), is for round-trip testing (see below) and to generate
+goals that are then properly proved in the theories
+hol_defaxiomsTheory and hol_defaxioms_proofsTheory.  It contains
+ACL2-tagged theorems created by slurping in the ACL2 generated file
+lisp/defaxioms.lisp.trans.ml, so its soundness relies on that of ACL2
+and the linking infrastructure. In contrast, hol_defaxiomsTheory is a
+pure HOL theory. It defines a subset of the constants in
+defaxiomsTheory (namely those constants occurring in axioms), and
+hol_defaxioms_proofsTheory has pure HOL proofs of the axioms.
+
+For round-trip testing (i.e. check infrastructure for transferring
+S-expressions between HOL and ACL2 on concrete examples), run hol and
+do:
+
+ load "defaxiomsTheory"; 
+ sexp.print_imported_acl2_theorems "defaxioms" "defaxioms.roundtrip";
+
+Not that defaxiomsTheory contains values of type thm that are not
+proved in HOL, but created using mk_oracle_thm from data imported
+from ACL2.
+
+To simplify the proved defaxioms (using the rewrites shown below) and
+then print them into a file defaxioms.prove.lisp, run hol and do:
+ 
+ load "hol_defaxioms_proofsTheory";
+ val defaxioms = theorems "hol_defaxioms_proofs";
+ open sexpTheory;
+ val simp_defaxioms = 
+  map
+   (I ## SIMP_RULE std_ss
+          [itel_def,andl_def,List_def,
+          asym_def,csym_def,ksym_def,osym_def,
+          ACL2_def,COMMON_LISP_def,KEYWORD_def,ACL2_OUTPUT_CHANNEL_def])
+   defaxioms;
+ sexp.print_thms_to_defthms simp_defaxioms "defaxioms.prove";
+
+To slurp in "examples/encap/example.ml" do:
+
+  use "load_sexp.ml";
+  load_book "../examples/encap/example";
+
+Mike Gordon
+16 Dec, 2005
+01 Dec, 2006
+21 Nov, 2008

@@ -1,0 +1,21 @@
+INCLUDES = ../../lambda/barendregt ../../lambda/basics \
+           ../../lambda/other-models ../
+
+EXTRA_CLEANS = $(patsubst %Theory.uo,%Theory.html,$(DEFAULT_TARGETS))
+
+ifdef POLY
+HOLHEAP = computability-heap
+EXTRA_CLEANS += $(HOLHEAP)
+
+
+BARE_THYS = ../../lambda/barendregt/normal_orderTheory \
+            ../../lambda/other-models/pure_dBTheory
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+all: $(DEFAULT_TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o computability-heap $(BARE_THYS)
+
+endif

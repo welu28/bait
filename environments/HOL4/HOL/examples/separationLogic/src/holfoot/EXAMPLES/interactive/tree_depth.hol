@@ -1,0 +1,35 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
+*)
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open treeTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Verify specifications                                                      *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/tree_depth.dsf"];
+val file2 = concat [examplesDir, "/interactive/tree_depth.dsf2"];
+val file3 = concat [examplesDir, "/interactive/tree_depth-holexp.dsf2"];
+
+val rewriteL = [MIN_MAX_DEPTH_THM, arithmeticTheory.MIN_DEF,
+    MIN_MAX_LIST_THM, arithmeticTheory.MAX_DEF,
+    MIN_MAX_DEPTH_THM];
+
+val _ = holfoot_verify_spec file 
+                 [ add_rewrites rewriteL ];
+
+val _ = holfoot_verify_spec file2
+                 [ add_rewrites rewriteL ];
+
+val _ = holfoot_verify_spec file3 
+                 [ add_rewrites rewriteL ];

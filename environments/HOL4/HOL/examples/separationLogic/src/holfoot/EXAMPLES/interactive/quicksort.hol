@@ -1,0 +1,223 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open sortingTheory arithmeticTheory listTheory rich_listTheory boolSimps;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+
+
+(******************************************************************************)
+(* Just the shape works automatically                                         *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/automatic/quicksort-shape.dsf"];
+val _ = holfoot_auto_verify_spec file;
+
+
+(******************************************************************************)
+(* Some useful REWRITES                                                       *)
+(******************************************************************************)
+
+val quicksort_opt = combined_gen_step_tac_opt [
+    add_rewrites [SORTED_DEF, PERM_REFL],
+    add_ssfrags [permLib.PERM_ss] ];
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file2 = concat [examplesDir, "/interactive/quicksort-full.dsf"];
+
+(* holfoot_set_goal file2 *)
+val quicksort_TAC =
+xHF_SOLVE_TAC [quicksort_opt] THEN
+REPEAT STRIP_TAC THENL [
+   HF_VC_TAC THEN REPEAT STRIP_TAC THEN
+   Cases_on `n = l_const - b_const` THEN ASM_SIMP_TAC arith_ss [],
+
+   HF_VC_TAC THEN
+   REWRITE_TAC [GSYM SWAP_ELEMENTS_def] THEN
+   MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
+   DECIDE_TAC,
+
+   Q.EXISTS_TAC `data` THEN
+   xHF_CONTINUE_TAC [quicksort_opt] THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `rdata ++ rdata'` THEN
+   HF_SOLVE_TAC THEN HF_VC_TAC THEN
+   Q.ABBREV_TAC `rdata_len = l_const - b_const'` THEN
+   `rdata_len > 0 /\
+    (r_const + 1 - b_const' = rdata_len) /\
+    (r_const - b_const' = PRE rdata_len) /\
+    (!n.  ((r_const < b_const' + n /\ 0 < n) /\ n <= (e_const' - b_const')) =
+         (PRE rdata_len < n /\ n < LENGTH data'))` by ALL_TAC THEN1 (
+      UNABBREV_ALL_TAC THEN
+      `LENGTH data' = LENGTH data` by METIS_TAC[PERM_LENGTH] THEN
+      POP_ASSUM MP_TAC THEN
+      ASM_SIMP_TAC arith_ss []
+   ) THEN
+   FULL_SIMP_TAC std_ss [GSYM SWAP_ELEMENTS_def, GSYM EL] THEN
+   NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
+   REPEAT STRIP_TAC THENL [
+      MATCH_MP_TAC sortingTheory.SORTED_APPEND_IMP THEN
+      FULL_SIMP_TAC arith_ss [relationTheory.transitive_def, EL] THEN
+      REPEAT STRIP_TAC THEN
+      Tactical.REVERSE (`(x <= HD data') /\ (HD data' < y)` by ALL_TAC) THEN1 (
+        ASM_SIMP_TAC arith_ss []
+      ) THEN
+      `MEM y (DROP rdata_len (SWAP_ELEMENTS (PRE rdata_len) 0 data')) /\
+       MEM x (TAKE rdata_len (SWAP_ELEMENTS (PRE rdata_len) 0 data'))` by
+          METIS_TAC[PERM_MEM_EQ] THEN
+      NTAC 2 (POP_ASSUM MP_TAC) THEN
+      SIMP_TAC list_ss [MEM_EL,
+           SWAP_ELEMENTS_def, LUPDATE_SEM, GSYM LEFT_FORALL_IMP_THM,
+           EL_LUPDATE, EL_FIRSTN, EL_BUTFIRSTN] THEN
+      REPEAT STRIP_TAC THENL [
+         Cases_on `PRE rdata_len = 0` THEN1 (
+            `n' = 0` by DECIDE_TAC THEN
+            ASM_SIMP_TAC list_ss []
+         ) THEN
+         Cases_on `n' = 0` THEN1 (
+            ASM_SIMP_TAC arith_ss []
+         ) THEN
+         ASM_SIMP_TAC arith_ss [COND_RAND, COND_RATOR],
+
+         Q.PAT_X_ASSUM `!n. X n ==> (HD data' < EL n data')` MATCH_MP_TAC THEN
+         ASM_SIMP_TAC arith_ss []
+      ],
+
+      MAP_EVERY (fn x => Q.PAT_X_ASSUM (`PERM X` @ x)  (ASSUME_TAC o
+         ONCE_REWRITE_RULE [PERM_SYM])) [`data`, `rdata'`, `rdata`] THEN
+      ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
+      ONCE_REWRITE_TAC [PERM_FUN_APPEND] THEN
+      SIMP_TAC list_ss [] THEN
+      MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
+      `LENGTH data' = LENGTH data` by
+          METIS_TAC[PERM_LENGTH] THEN
+      UNABBREV_ALL_TAC THEN
+      ASM_SIMP_TAC arith_ss []
+   ],
+
+
+   HF_VC_TAC THEN
+   Q.ABBREV_TAC `len = e_const' + 1 - b_const'`  THEN
+   `(len = 0) \/ (len = 1)` by (UNABBREV_ALL_TAC THEN DECIDE_TAC) THEN (
+      FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute, SORTED_DEF]
+   )
+];
+
+
+val _ = holfoot_tac_verify_spec file2 NONE
+                [("quicksort", quicksort_TAC)];
+
+
+(******************************************************************************)
+(* Verify specification - loop spec                                           *)
+(******************************************************************************)
+
+val file3 = concat [examplesDir, "/interactive/quicksort-full-loopspec.dsf"];
+
+(* holfoot_set_goal file3 *)
+val quicksort_loopspec_TAC =
+xHF_SOLVE_TAC [quicksort_opt, no_expands, simple_prop_simps] THEN
+REPEAT STRIP_TAC THENL [
+   HF_SOLVE_TAC,
+
+   Q.EXISTS_TAC `(HD data)::data2` THEN
+   HF_SOLVE_TAC THEN HF_VC_TAC THEN
+   Cases_on `data` THEN (
+      FULL_SIMP_TAC list_ss [PERM_CONS_IFF]
+   ) THEN
+   REPEAT STRIP_TAC THENL [
+     METIS_TAC[PERM_SYM],
+     Cases_on `n` THEN FULL_SIMP_TAC list_ss []
+   ],
+
+   ASM_SIMP_TAC arith_ss [] THEN
+   xHF_SOLVE_TAC [simple_prop_simps, no_expands, quicksort_opt] THEN
+   Cases_on `old_l = 0` THEN1 xHF_SOLVE_TAC [quicksort_opt, simple_prop_simps] THEN
+   Cases_on `old_l = old_r` THEN1 (
+      xHF_SOLVE_TAC [quicksort_opt] THEN HF_VC_TAC THEN
+      ASM_SIMP_TAC std_ss [GSYM EL, LUPDATE___REPLACE_ID, PERM_REFL]
+   ) THEN
+   `old_l < old_r` by DECIDE_TAC THEN FULL_SIMP_TAC arith_ss [] THEN
+   REPEAT GEN_TAC THEN
+   Q.EXISTS_TAC `data2 ++ DROP (old_r - old_l) (SWAP_ELEMENTS 0 (old_r - old_l) data)` THEN
+   ASM_SIMP_TAC list_ss [SWAP_ELEMENTS_INTRO] THEN
+   HF_SOLVE_TAC THEN
+   HF_VC_TAC THEN REPEAT STRIP_TAC THENL [
+       Q.PAT_X_ASSUM `PERM X data2` (ASSUME_TAC o ONCE_REWRITE_RULE [PERM_SYM]) THEN
+       ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
+       MATCH_MP_TAC (ONCE_REWRITE_RULE [PERM_SYM] PERM_SWAP_ELEMENTS) THEN
+       FULL_SIMP_TAC arith_ss [LENGTH_SWAP_ELEMENTS],
+
+       Cases_on `n < LENGTH data2` THEN (
+          FULL_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2, LENGTH_SWAP_ELEMENTS,
+           EL_BUTFIRSTN, EL_SWAP_ELEMENTS, LENGTH_SWAP_ELEMENTS]
+       )
+   ],
+
+   HF_SOLVE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `HD (data)::data2` THEN
+   REPEAT STRIP_TAC THEN
+   `?dh dtl. data = dh::dtl` by (Cases_on `data` THEN FULL_SIMP_TAC list_ss []) THEN
+   FULL_SIMP_TAC list_ss [] THEN
+   HF_SOLVE_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.EXISTS_TAC `rdata ++ rdata'` THEN
+   FULL_SIMP_TAC list_ss [SWAP_ELEMENTS_INTRO] THEN
+   HF_SOLVE_TAC THEN
+   STRIP_TAC THEN
+   REPEAT (Q.PAT_X_ASSUM `LENGTH Y = X` (ASSUME_TAC o GSYM)) THEN
+   `r_const − b_const' = PRE (LENGTH rdata)` by DECIDE_TAC THEN
+   FULL_SIMP_TAC list_ss [MIN_EQ] THEN
+   HF_VC_TAC THEN
+   REPEAT STRIP_TAC THENL [
+      MATCH_MP_TAC sortingTheory.SORTED_APPEND_IMP THEN
+      FULL_SIMP_TAC arith_ss [relationTheory.transitive_def, EL] THEN
+      REPEAT STRIP_TAC THEN
+      Tactical.REVERSE (`~(dh < x) /\ (dh < y)` by ALL_TAC) THEN1 DECIDE_TAC THEN
+      `MEM x (TAKE (LENGTH rdata) (SWAP_ELEMENTS (PRE (LENGTH rdata)) 0 (dh::data2))) /\
+       MEM y (DROP (LENGTH rdata) (SWAP_ELEMENTS (PRE (LENGTH rdata)) 0 (dh::data2)))` by
+          METIS_TAC[PERM_MEM_EQ] THEN
+      NTAC 2 (POP_ASSUM MP_TAC) THEN
+      Q.SUBGOAL_THEN `LENGTH rdata <= SUC (LENGTH data2)` MP_TAC THEN1 DECIDE_TAC THEN
+      SIMP_TAC list_ss [MEM_EL, NOT_LESS, GSYM LEFT_FORALL_IMP_THM,
+           SWAP_ELEMENTS_def, LUPDATE_SEM, LENGTH_LUPDATE,
+           EL_FIRSTN, EL_BUTFIRSTN] THEN
+      REPEAT STRIP_TAC THENL [
+         Cases_on `PRE (LENGTH rdata)` THEN1 ASM_SIMP_TAC list_ss [] THEN
+         Cases_on `n` THEN ASM_SIMP_TAC list_ss [GSYM NOT_LESS] THEN
+         ASM_SIMP_TAC arith_ss [COND_RAND, COND_RATOR],
+
+         Cases_on `n' + LENGTH rdata` THEN ASM_SIMP_TAC list_ss []
+      ],
+
+      ASM_SIMP_TAC (std_ss++permLib.PERM_SIMPLE_ss) [] THEN
+      MATCH_MP_TAC PERM_SWAP_ELEMENTS THEN
+      ASM_SIMP_TAC list_ss []
+   ],
+
+   HF_SOLVE_TAC THEN HF_VC_TAC THEN
+   REPEAT STRIP_TAC THEN
+   Q.ABBREV_TAC `len = e_const' + 1 - b_const'`  THEN
+   `(len = 0) \/ (len = 1)` by (UNABBREV_ALL_TAC THEN DECIDE_TAC) THEN (
+      FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM_compute, SORTED_DEF]
+   )
+]
+
+
+val _ = holfoot_tac_verify_spec file3 NONE
+                [("quicksort", quicksort_loopspec_TAC)]

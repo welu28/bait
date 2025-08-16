@@ -1,0 +1,641 @@
+(*
+quietdec := true;
+loadPath := 
+            (concat [Globals.HOLDIR, "/src/quantHeuristics"]) :: 
+            !loadPath;
+*)
+
+
+open HolKernel Parse boolLib Drule ConseqConv computeLib
+open optionTheory
+open quantHeuristicsLib;
+
+(*
+quietdec := false;
+*)
+
+
+(*Simple find an equation and instatiate it,
+  same as UNWIND_CONV*)
+
+val t = ``?x. Q /\ (x=7) /\ P x``;
+val t = ``!x. ((x=7) /\ Q) ==> P x``;
+
+(* Result:  Q /\ P 7 *)
+val thm = SIMP_CONV std_ss [] t;
+val thm = QUANT_INSTANTIATE_CONV [] t;
+val thm = QUANT_INSTANTIATE_CONV []``?x. x = 2``;
+
+(*Quantifiers are resorted to be able to find easy instantations*)
+val t = ``?y x z. (x=y+z) /\ X x y z``;
+val t = ``!y x z. ~(x=y+z) \/ X x y z``;
+
+val thm = SIMP_CONV std_ss [] t
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+(*However, the new library can handle more difficult nestings than
+  the existing UNWIND conversions*)
+
+val t = ``?x. ((x=7) \/ (7 = x)) /\ P x``;
+(* Result:  P 7 *)
+
+val t = ``?x. !y. (x=7) /\ P x y``;
+(* Result:  !y. P 7 y *)
+
+val t = ``?x. (!z. Q z /\ (x=7)) /\ P x``
+(* Result:  (!z. Q z) /\ P 7 /\ Q t *)
+
+val t = ``!x z. ?g. (((x=7) /\ Q g)) ==> P x``
+(* Result:  (?g. Q g) ==> P 7 *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t
+val thm = SIMP_CONV std_ss [] t
+
+
+(*
+If one want's to know in detail, how it comes up with a guess some
+verbose output is available*)
+
+(*no debug*)
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
+
+(*simple traces*)
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
+
+(*show theorems in guesses*)
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 2;
+set_trace "QUANT_INSTANTIATE_HEURISTIC___print_term_length" 2000;
+
+val thm = QUANT_INSTANTIATE_CONV [] t;
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
+
+
+
+
+(*Instead of just looking for an instantiation i such that all other values
+  v != i the predicate P i holds (for allquantfication) or does not hold (for 
+  existential quantification), the new library also looks for values that satisfy /
+  dissatisfy the predicate*)
+
+
+(*figures out to instantiate x with 8*)
+val t = ``!x. P /\ ~(8 = x) /\ Z``;
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+(*figures out to instantiate x with 8*)
+val t = ``?x. P \/ (8 = x) \/ Z``;
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+
+(*The new library also uses unification to figure out instantions*)
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(10)``;
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (x + 2))``;
+val t = ``?x. (f(8 + 2) = f(x + 2)) /\ P(f (2 + x))``; (*fails *)
+
+val t = ``?x. P \/ (f(8 + 2) = f(x + 2)) \/ Z``;
+val t = ``?x. P /\ (f(8 + 2) = f(x + 2)) /\ 
+              g (f (x+2)) /\ Z``;
+
+val t = ``?x. P /\ (f 2 = f x) /\ Q /\ Q2(f x) /\ Z /\
+              (f x = f 2)``;
+
+val thm = QUANT_INSTANTIATE_CONV [] t
+val thm = SIMP_CONV std_ss [] t
+
+
+
+(*Bound variables in instantiations can be tackeled.
+  More convincing examples for having free variables in
+  guesses will follow later when datatype specific code is used.*)
+
+val t = ``?x. P /\ (!y. x = y + 2) /\ Z x``;
+val thm = QUANT_INSTANTIATE_CONV [] t;
+(*result ?y'. P /\ (!y. y' + 2 = y + 2) /\ Z (y' + 2)*)
+
+
+
+val t = ``?x. P /\ (?y. x = y + 2) /\ Z x``;
+(*matching + bound variables
+  result ?y'. P /\ Z (y' + 2)*)
+
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+
+(*There is a little bit of support for unique existential quantification,
+  however, neither bound variables nor matching can be used for it*)
+val t = ``?!x. !z. ((7=x) /\ Q z x)``;
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+(* By default QUANT_INSTANTIATE_CONV just knows about
+   boolean operators and equations. On easy way to
+   extend this is using TypeBase.
+   In the following examples, TypeBase is used to come up with guesses*)
+
+val t = ``!x. ~(x = 0) ==> P x``
+(*Result !x_n. P (SUC x_n) *)
+
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t
+
+
+(*To come up with this result, the case-theorem form TypeBase has been
+  used. It states that if an number is not zero, it's the successor of
+  something*)
+
+val t = ``!x. (x = 0)``
+(*Result F, distinct theorem of TypeBase used*)
+val thm = QUANT_INSTANTIATE_CONV  [TypeBase_qp] t
+
+
+val t = ``?x. ((x,y) = (0,z)) /\ (P x)``
+(*Result ((0,y) = (0,z)) /\ P 0, one_one theorem of TypeBase used*)
+
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t
+
+(* The new library supports guesses without justification. For example,
+   there is support for just considering the conclusion of an implication. *)
+
+val t = ``?x. P x ==> ((x = 2) /\ Q x)``
+
+(* in general x cannot be instantiated, because nothing is know about P and Q.
+   (x = 2) looks tempting, but in case ~(Q 2), P 2 and ~(P 3) this is wrong. *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [implication_concl_qp] t (* fails with unjustified guesses *)
+
+(* We can't prove equality, but just implications using a heuristic that produces
+   unjustified guesses *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [implication_concl_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(* Expanding is possible as well *)
+val thm = EXPAND_QUANT_INSTANTIATE_CONV [implication_concl_qp] t
+val thm = SIMP_CONV (std_ss ++ EXPAND_QUANT_INST_ss [implication_concl_qp]) [] t
+
+
+
+(*The main advantage of the new library is however, it is user extensible.
+  TypeBase_qp uses some theorem from TypeBase. Users can provide there own parameters.
+  In the following some examples are given, how these parameters can be used. 
+*)
+
+
+
+val t = ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3)``
+(*Standard calls eliminate all 3 variables
+ |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = T
+*)
+val thm = QUANT_INSTANTIATE_CONV [] t
+
+
+(* filter_qp gets a list of ML functions "filter v t" that get a variable v and a term t and
+   return whether the tool should try to instantiate v in t. For example, 
+   let's just get rid of y by using filter_qp
+
+ |- ?x y z. (x = 1) /\ (y = 2) /\ (z = 3) = 
+    ?x   z. (x = 1) /\            (z = 3)*)
+
+val thm = QUANT_INSTANTIATE_CONV [filter_qp [fn v => fn t => (v = ``y:num``)]] t
+
+
+(* By default, the quantifier heuristics don't know IS_SOME. *)
+val t = ``!x. IS_SOME x ==> P x``
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+
+(* By adding a rewrite rule for IS_SOME, the standard rules for equations and 
+   quantifiers can be exploited *)
+val IS_SOME_EXISTS = prove (``IS_SOME x = (?x'. x = SOME x')``, Cases_on `x` THEN SIMP_TAC std_ss []);
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS]] t
+
+(* |- (!x. IS_SOME x ==> P x) <=> !x'. IS_SOME (SOME x') ==> P (SOME x') 
+
+   To clean up the result after instantiation, rewrite theorems can be provided via
+   final_rewrite_qp
+*)
+
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS], final_rewrite_qp[option_CLAUSES]] t
+
+(*
+ val thm =
+   |- (!x. IS_SOME x ==> P x) <=> !x'. P (SOME x'):
+   thm
+
+if rewrites are not enough, conv_ss can be used as well. 
+*)
+
+
+(* sometimes you want to apply knowledge that some predicate is true or false.
+   instantiation_qp provides an interface for giving explicit theorems to state 
+   satisfying and dissatisfying instantiations. *)
+
+val t = ``?m:num. n <= m``
+
+(* By default, this can't be handled, but adding the reflexivity theorem helps *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [instantiation_qp[arithmeticTheory.LESS_EQ_REFL]] t (* succeeds *)
+
+
+(* Let's consider an example to demonstrate context *)
+val t = ``P m ==> ?n. P n``		
+
+(* applied naively, the tool fails *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fail *)
+
+(* This is not surprising, because the conversion does not collect context.
+   The simplifier has to be used to collect context *)
+val thm = SIMP_CONV (bool_ss++QUANT_INST_ss []) [] t
+
+(* Another option is using consequence conversions. However, this will create only implications. 
+
+   |- T ==> P m ==> ?n. P n:
+*)
+
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [] CONSEQ_CONV_STRENGTHEN_direction t (* fail *)
+
+(*
+Lets for example teach the heuristic to
+find counterexamples for natural numbers.
+
+Thanks to the dictinct-theorem from TypeBase, it is already possible,
+to find counterexamples for theorems of the form ``0`` and ``SUC n`` 
+*)
+
+val t = ``!x. x = 0``
+val t = ``?x. ~(x = SUC n)``
+val t = ``?x. ((x = SUC n) /\ Q x n) ==> P x``
+
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t 
+
+
+(*However, for arbitrary numbers that is not possible yet
+  (hopefully, perhaps it got added meanwhile). At least
+  the theorems from TypeBase are not sufficient. One needs
+  a stronger one. *)
+
+val t = ``?x:num. ((x = n) /\ Q x n) ==> P x``
+
+(*the normal one raises UNCHANGED*)
+val thm = QUANT_INSTANTIATE_CONV [TypeBase_qp] t 
+val thm = QUANT_INSTANTIATE_CONV [] t 
+
+(*The extended one is able to reduce it to true, by knowing that ~(SUC n = n) holds*)
+val thm = QUANT_INSTANTIATE_CONV [distinct_qp [prim_recTheory.SUC_ID]] t 
+
+(*One can also use a ready qp*)
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t 
+
+
+
+(* There is no info about predicate sets in TypeBase. However
+   a case distinction might by usefull*)
+
+val SIMPLE_SET_CASES = prove (
+``!s. (s = {}) \/ ?x t. (s = x INSERT t)``,
+PROVE_TAC[pred_setTheory.SET_CASES]);
+
+
+val t = ``!s. ~(s = {}) ==> (CARD s > 0)``;
+
+(*raises unchanged*)
+val thm = QUANT_INSTANTIATE_CONV [] t;
+
+(*The extended one is able to reduce it*)
+val thm = QUANT_INSTANTIATE_CONV 
+   [cases_qp [SIMPLE_SET_CASES]] t 
+
+
+
+
+(*
+  There is no mentioning of IS_SOME in TypeBase. However, being able
+  to find instantiations would be great. A simple way to achive it via 
+  repacing IS_SOME x with (?x'. x = SOME x') during the heuristic search.
+*)
+
+
+val t = ``!x. IS_SOME x ==> P x``;
+
+(*raises unchanged*)
+val thm = QUANT_INSTANTIATE_CONV [] t;
+
+	  
+val IS_SOME_EXPAND = prove (``IS_SOME x = ?x'. x = SOME x'``,
+			      Cases_on `x` THEN SIMP_TAC std_ss []);
+
+val thm = QUANT_INSTANTIATE_CONV [rewrite_qp [IS_SOME_EXPAND]] t;
+
+
+(*The same works if we use a conversion instead*)
+val thm = QUANT_INSTANTIATE_CONV 
+            [convs_qp [REWR_CONV IS_SOME_EXPAND]] t;
+
+
+(*notice that here REWR_CONV is used, so the rewrite takes just place at
+  top-level. This is what happens internally,
+  if IS_SOME_EXPAND is added to the list of
+  REWRITES. Other conversions like e.g. REWRITE_CONV would work as well, 
+  but for REWRITE_CONV IS_SOME would be replaced at subpositions. Thus, there would
+  be an exponential blowup!!! Have a look at the debug output
+  to compare*)
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 1;
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qp [REWR_CONV IS_SOME_EXPAND]] t;
+  
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qp [REWRITE_CONV [IS_SOME_EXPAND]]] t;
+
+(*TOP_ONCE_REWRITE_CONV is suitable as well,
+  it behaves like REWR_CONV for a list of theorems*)
+  
+val thm = QUANT_INSTANTIATE_CONV 
+          [convs_qp [TOP_ONCE_REWRITE_CONV [IS_SOME_EXPAND]]] t;
+
+
+set_trace "QUANT_INSTANTIATE_HEURISTIC" 0;
+
+fun dummy_heuristic sys v t =
+let
+   val i = mk_var ("choose_me", type_of v);
+in
+   guess_list2collection ([], [guess_general (i,[])])
+end;
+
+val dummy_qp = top_heuristics_qp [dummy_heuristic]
+
+(* Alternative way: *)
+
+val dummy_qp = oracle_qp (fn v => fn t =>
+  let
+     val i = mk_var ("choose_me", type_of v);
+  in
+     SOME (i, [])
+  end)
+
+
+val t = ``?x. P x``;
+
+(* Nothing can be proved, we only say: "Trust me". Therefore the normal conversion fails. *)
+val thm = QUANT_INSTANTIATE_CONV [dummy_qp] t
+
+(* Consequence Conversions and expanding conversions are fine though *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [dummy_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(*result 
+ val thm = |- P choose_me ==> (?x. P x) : thm
+*)
+
+val thm = EXPAND_QUANT_INSTANTIATE_CONV [dummy_qp] t
+
+(*result 
+ val thm = |- (?x. P x) <=> (!x. ~(x = choose_me) ==> ~P x) ==> P choose_me :
+  thm
+*)
+
+
+(* Let's write a slightly more interesting oracle that
+   instantiates every list with a non-empty one *)
+
+(* 
+
+val t = ``P (TL (l:'a list))``
+val v = ``l:'a list``
+*)
+val dummy_list_qp = oracle_qp (fn v => fn t =>
+  let
+     val (v_name, v_list_ty) = dest_var v;
+     val v_ty = listSyntax.dest_list_type v_list_ty;
+
+     val x = mk_var (v_name ^ "_hd", v_ty);
+     val xs = mk_var (v_name ^ "_tl", v_list_ty);
+     val x_xs = listSyntax.mk_cons (x, xs)
+  in
+     SOME (x_xs, [x, xs])
+  end)
+
+val t = ``?x:'a list y:'b. P (x, y)``
+
+(* Be careful to use a tactic that does no REDEPTH but just depth, because otherwise
+   the procedure will not terminate. *)
+val thm = NORE_QUANT_INSTANTIATE_CONSEQ_CONV [dummy_list_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+
+(*There is a stateful argument stateful_qp,
+  let's add something to it*)
+
+val _ = clear_stateful_qp ();
+val _ = stateful_qp___add_combine_arguments 
+            [distinct_qp [prim_recTheory.SUC_ID],
+             rewrite_qp [arithmeticTheory.EQ_ADD_RCANCEL, 
+                           arithmeticTheory.EQ_ADD_LCANCEL,
+                           arithmeticTheory.ADD_CLAUSES]];
+
+   
+
+
+
+(* Some examples on how QUANT_INSTANTIATE_CONV behaves
+   on standard datatypes. Here both the statefull as well
+   as specific arguments for each datatype are used.*)
+
+
+(* There is basic support for numbers. Just very simple stuff. *)
+
+val t = ``!y:num. x = y`` 
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
+
+val t = ``!x. (SUC x = SUC 3) ==> P x`` 
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
+
+
+val t = ``!x. (x + z = 3 + z) ==> P x`` 
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
+
+
+val t = ``!x. P x /\ ~(x = 0) ==> Q x z`` 
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t;
+val thm = QUANT_INSTANTIATE_CONV [num_qp] t;
+
+
+
+
+(* Pairs *)
+
+val t = ``!p. (x = FST p) ==> Q p`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t;
+
+val t = ``!p. ?t. ((f t = FST p) /\ Z x) ==> Q p`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+val t = ``?p. ((SND p) = 7) /\ Q p`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+val t = ``?v. (v,X) = Z`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+val t = ``?v. (v,X) = (a,9)`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+val t = ``?v. (\ (pa, pb, pc). P pa pb pc) v`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+val t = ``?v. (\ ((pa, pb), pc). P pa pb pc) v`` 
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+
+
+(*customising pair_qp*)
+val t = ``?p:('a # ('b # 'c # 'd) # 'a). P (FST p) (SND p) /\ Q p`` 
+
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___FST_SND___pred true]] t
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___FST_SND___pred false]] t
+
+
+val t = ``?p:('a # ('b # 'c # 'd) # 'a). P p`` 
+
+val thm = QUANT_INSTANTIATE_CONV [pair_default_qp] t (*raises unchanged*)
+val thm = QUANT_INSTANTIATE_CONV [pair_qp [split_pair___ALL___pred]] t
+
+
+(*Some things about option types*)
+val t = ``!x. IS_SOME x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!x. IS_NONE x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!x. IS_SOME x ==> P x``;
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!x. IS_NONE x \/ P x``
+val thm = QUANT_INSTANTIATE_CONV [option_qp] t
+
+val t = ``!x. IS_SOME x \/ P x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!x. (x = SOME y) /\ P x``
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+
+
+(*Some things about lists,
+  Typebase contains enough for these simple examples*)
+val t = ``!l. (~(l = []) ==> (LENGTH l > 0))``;
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+val thm = QUANT_INSTANTIATE_CONV [std_qp] t
+
+val t = ``!l. (l = h::h2) \/ X``
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+val t = ``!l. (l = h::h2)``
+val thm = QUANT_INSTANTIATE_CONV [stateful_qp] t
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+val t = ``!l. (NULL l)``
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+
+val t = ``!l. NULL l ==> P l``
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+val t = ``!l. ~(NULL l) ==> P l``
+val thm = QUANT_INSTANTIATE_CONV [list_qp] t
+
+
+
+(*Some things about records and the simplfier*)
+
+Hol_datatype `my_record = <| field1 : bool ;
+                             field2 : num  ;
+                             field3 : bool |>`
+
+(*using the default record_qp. It does not simplify, and applies to everything*)
+val t = ``?r1:my_record. r1.field1``
+val thm = QUANT_INSTANTIATE_CONV [record_default_qp] t
+
+(*turning simplification on*)
+val t = ``?r1:my_record. r1.field1``
+val thm = QUANT_INSTANTIATE_CONV [record_qp true (K (K true))] t;
+
+(*using it as a ssfrag*)
+val t = ``?r1:my_record. r1.field1``
+val thm = SIMP_CONV (std_ss ++ QUANT_INST_ss [record_qp true (K (K true))]) [] t;
+val thm = SIMP_CONV (std_ss ++ QUANT_INST_ss [record_default_qp]) [] t;
+
+set_goal ([], ``?r1:my_record. r1.field1``);
+e (SRW_TAC [QUANT_INST_ss [record_default_qp]] [])
+
+
+
+(*Tactics using the assumption*)
+
+set_goal ([], ``!x. IS_SOME x ==> P x``);
+
+set_goal ([], ``!x y. IS_SOME x /\ IS_SOME y ==> (x = y)``);
+
+e (
+   REPEAT STRIP_TAC THEN
+   ASM_QUANT_INSTANTIATE_TAC [std_qp]
+)
+
+(* in contrast, the simplifier does not work, since it does not instantiate free variables *)
+e (
+   REPEAT STRIP_TAC THEN
+   FULL_SIMP_TAC (std_ss++(QUANT_INST_ss [std_qp])) []
+)
+
+
+
+(*A combination of quantHeuristics with consequence Conversions
+  leads to an extended version of EXISTS_TAC. This version
+  can instantiate quantifiers that occur as subterms. As a result,
+  existential quantifiers can be instantiated, if they occur under even
+  negation level and universal ones under odd. Moreover, it is possible
+  to keep free variables in the instantiations.*)
+
+val t = ``!x:num. (!z:num. P x z) ==> ?a:num b:num. Q a b z``;
+set_goal ([], t)
+(*Result      ``!x    . (        P x 0) ==> ?      b a'. Q (SUC a') b z``*)
+  
+
+e (QUANT_INST_TAC [("z", `0`, []),
+	   ("a", `SUC a'`, [`a'`])]);
+
+
+``(?x:num. P x) /\ (?x. x \/ y)``
+
+(* Let's play around with conjunctions and guessing *)
+val t = ``P 2 ==> ?x. P x /\ Q x``
+
+(* in general x cannot be instantiated, because nothing is know about P and Q.
+   (x = 2) looks tempting, but in case ~(Q 2), P 3 and Q 3 this is wrong. *)
+
+val thm = QUANT_INSTANTIATE_CONV [] t (* fails *)
+val thm = QUANT_INSTANTIATE_CONV [conj_lift_qp] t (* fails with unjustified guesses *)
+
+(* We can't prove equality, but just implications using a heuristic that produces
+   unjustified guesses *)
+val thm = QUANT_INSTANTIATE_CONSEQ_CONV [conj_lift_qp] CONSEQ_CONV_STRENGTHEN_direction t
+
+(* Expanding is possible as well *)
+val thm = SIMP_CONV (std_ss ++ EXPAND_QUANT_INST_ss [conj_lift_qp]) [] t
+
+(* try it as a tactic *)
+set_goal ([], t)
+e (REPEAT STRIP_TAC)
+
+e (QUANT_INSTANTIATE_CONSEQ_TAC [conj_lift_qp])
+
+(* or expand *)
+e (ASM_SIMP_TAC (std_ss ++ EXPAND_QUANT_INST_ss [conj_lift_qp]) [])

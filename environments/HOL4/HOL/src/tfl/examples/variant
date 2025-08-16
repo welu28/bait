@@ -1,0 +1,89 @@
+(*---------------------------------------------------------------------------
+     Find an element not in a given list.
+ ---------------------------------------------------------------------------*)
+
+val variant_def = 
+  Hol_defn "variant" 
+     `variant x L = if MEM x L then variant (x+1) L else x`;
+
+(*---------------------------------------------------------------------------
+   Lemma required in termination proof.
+ ---------------------------------------------------------------------------*)
+
+val LENGTH_FILTER_SUBSET = Q.prove(
+`(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
+DISCH_TAC THEN Induct THEN ZAP_TAC (list_ss && [listTheory.FILTER]) []);
+
+
+(*---------------------------------------------------------------------------
+      Example of a "do-it-yourself" termination proof for variant.
+ ---------------------------------------------------------------------------*)
+
+Defn.tgoal variant_def;  
+
+e (WF_REL_TAC `measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`);
+
+(* Step-by-step way
+b();
+e (Q.EXISTS_TAC`measure \(x,L). LENGTH(FILTER (\y. x <= y) L)`
+     THEN TotalDefn.TC_SIMP_TAC [] []);
+*)
+e (RW_TAC std_ss []   (* ETA-conv. to be done before induction *)
+   THEN Induct_on `L` 
+   THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM]
+   THEN RW_TAC arith_ss [DECIDE (Term `x<SUC y = x <= y`),
+                         LENGTH_FILTER_SUBSET]);
+
+val [variant_eqns,variant_ind] = CONJUNCTS (top_thm());
+
+
+(*---------------------------------------------------------------------------
+     All wrapped up after proof found.
+ ---------------------------------------------------------------------------*)
+
+val (variant_eqn, variant_ind) = 
+Defn.tprove 
+  (variant_def, 
+   WF_REL_TAC `measure \(x,L). LENGTH(FILTER (\y. x<=y) L)`
+     THEN RW_TAC std_ss []
+     THEN Induct_on `L` 
+     THEN RW_TAC list_ss [listTheory.FILTER,listTheory.MEM,
+                          DECIDE (Term `x<SUC y = x <= y`),
+                          LENGTH_FILTER_SUBSET]);
+
+(*---------------------------------------------------------------------------
+       Properties.
+ ---------------------------------------------------------------------------*)
+
+val variant_correct = Q.prove(
+`!x L. ~MEM (variant x L) L`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []);
+
+(*---------------------------------------------------------------------------*
+ *   Of all the numbers that aren't in L, variant x L is the                 *
+ *   smallest one that is greater-than-or-equal-to x.                        *
+ *---------------------------------------------------------------------------*)
+
+val variant_minimal = Q.prove(
+`!x L y. ~MEM y L /\ x<=y ==> variant x L <= y`,
+recInduct variant_ind
+  THEN RW_TAC std_ss []
+  THEN ONCE_REWRITE_TAC [variant_eqn]
+  THEN RW_TAC std_ss []
+  THEN `x < y` by PROVE_TAC [arithmeticTheory.LESS_OR_EQ]
+  THEN RW_TAC arith_ss []);
+
+
+(*---------------------------------------------------------------------------
+         Evaluation of variant with computeLib
+ ---------------------------------------------------------------------------*)
+
+val Eval = EVAL o Term;
+
+Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
+Eval `variant 1 [1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;16;16;16;165]`;
+Eval `variant (SUC 0) []`;
+Eval `variant (SUC 0) [SUC(SUC 0)]`;

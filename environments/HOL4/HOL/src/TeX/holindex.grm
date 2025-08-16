@@ -1,0 +1,97 @@
+open holindexData
+
+%%
+%name Holindex
+%eop EOF
+%term
+     LBRACE
+  |  RBRACE
+  |  LBRACKET
+  |  RBRACKET
+  |  EQUAL
+  |  TERM
+  |  TYPE
+  |  THEOREM
+  |  THEOREMS
+  |  IDS
+  |  STRING of string
+  |  FORCE_INDEX
+  |  LONG_INDEX
+  |  SHORT_INDEX
+  |  OPTIONS
+  |  LABEL
+  |  CONTENT
+  |  LATEX
+  |  COMMENT
+  |  IDENT of string
+  |  COMMA
+  |  EOF
+
+
+
+(* entry points *)
+
+%nonterm
+     top of parse_entry list
+  |  entry of parse_entry list
+  |  entry_seq of parse_entry list
+  |  ident_seq of string list
+  |  option of parse_entry -> parse_entry
+  |  option_seq of parse_entry -> parse_entry
+
+%start top
+%pos (int * int)
+
+
+
+%%
+
+top:
+   entry_seq ( entry_seq )
+
+entry_seq :
+    EOF
+       ( [] )
+  | entry entry_seq
+       ( entry @ entry_seq )
+
+entry:
+    TERM LBRACE IDENT COMMA option_seq RBRACE
+       ( [mk_update_parse_entry ("Term", IDENT) option_seq] )
+  | TYPE LBRACE IDENT COMMA option_seq RBRACE
+       ( [mk_update_parse_entry ("Type", IDENT) option_seq] )
+  | THEOREM LBRACE IDENT COMMA option_seq RBRACE
+       ( [mk_update_parse_entry ("Thm", IDENT) option_seq] )
+  | THEOREMS LBRACE IDS EQUAL LBRACKET ident_seq RBRACKET COMMA option_seq RBRACE
+       ( mk_theorem_parse_entries ident_seq option_seq )
+
+ident_seq:
+    (* empty *)   ([])
+  | IDENT         ([IDENT])
+  | IDENT COMMA ident_seq
+      (IDENT::ident_seq)
+
+option_seq:
+    (* empty *)   (fn x => x)
+  | option        (option)
+  | option COMMA option_seq
+      (fn e => option_seq (option e))
+
+option:
+    FORCE_INDEX
+       (parse_entry___force_index)
+  | LONG_INDEX
+       (parse_entry___full_index true)
+  | SHORT_INDEX
+       (parse_entry___full_index false)
+  | LABEL EQUAL STRING
+       (parse_entry___set_label STRING)
+  | OPTIONS EQUAL STRING
+       (parse_entry___set_options STRING)
+  | CONTENT EQUAL STRING
+       (parse_entry___set_content STRING)
+  | LATEX EQUAL STRING
+       (parse_entry___set_latex STRING)
+  | COMMENT EQUAL STRING
+       (parse_entry___set_comment STRING)
+

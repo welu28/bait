@@ -1,0 +1,261 @@
+
+-----------------------------------------------------------------
+       HOL [Kananaskis 2 (built Fri Aug  9 01:27:19 2002)]
+
+       For introductory HOL help, type: help "hol";
+-----------------------------------------------------------------
+
+[closing file "/local/scratch/jeh1004/binaries/hol98/tools/end-init.sml"]
+- - > val it = () : unit
+- > val 'a first_token = fn : 'a frag list -> string
+- > val size_of = fn : string -> (term * thm) option
+- > val boolify_of = fn : string -> (term * thm) option
+- > val Hol_datatype = fn :
+  hol_type frag list -> string * (term * thm) option * (term * thm) option
+- > val boolify = fn : term -> thm
+- <<HOL message: Defined type: "NumBool0">>
+runtime: 0.220s,    gctime: 0.040s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 9.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 1515.
+Total: 1524.
+> val it =
+    ("NumBool0",
+     SOME(``NumBool0_size``,
+          |- (!a. NumBool0_size (Num0 a) = 1 + a) /\
+             !a. NumBool0_size (Bool0 a) = 1 + case a of T -> 0 || F -> 0),
+     SOME(``encode_NumBool0``,
+          |- (!a. encode_NumBool0 (Num0 a) = APPEND [T] (encode_num a)) /\
+             !a. encode_NumBool0 (Bool0 a) = APPEND [F] (encode_bool a))) :
+  string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined type: "NumBoolNums">>
+runtime: 0.310s,    gctime: 0.060s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 11.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 2401.
+Total: 2412.
+> val it =
+    ("NumBoolNums",
+     SOME(``NumBoolNums_size``,
+          |- (!a. NumBoolNums_size (Num a) = 1 + a) /\
+             (!a. NumBoolNums_size (Bool a) = 1 + case a of T -> 0 || F -> 0) /\
+             !a. NumBoolNums_size (Nums a) = 1 + list_size (\x. x) a),
+     SOME(``encode_NumBoolNums``,
+          |- (!a. encode_NumBoolNums (Num a) = APPEND [T; T] (encode_num a)) /\
+             (!a. encode_NumBoolNums (Bool a) = APPEND [T; F] (encode_bool a)) /\
+             !a.
+               encode_NumBoolNums (Nums a) =
+               APPEND [F; T] (encode_list encode_num a))) :
+  string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined type: "NTree">>
+runtime: 0.630s,    gctime: 0.080s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 12.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 3435.
+Total: 3447.
+> val it =
+    ("NTree",
+     SOME(``NTree_size``,
+          |- (!a. NTree_size (Tree a) = 1 + NTree1_size a) /\
+             (NTree1_size [] = 0) /\
+             !a0 a1. NTree1_size (a0::a1) = 1 + (NTree_size a0 + NTree1_size a1)),
+     SOME(``encode_NTree``,
+          |- (!a. encode_NTree (Tree a) = encode_NTree1 a) /\
+             (encode_NTree1 [] = [T]) /\
+             !a0 a1.
+               encode_NTree1 (a0::a1) =
+               APPEND [F] (APPEND (encode_NTree a0) (encode_NTree1 a1)))) :
+  string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined type: "List">>
+runtime: 0.280s,    gctime: 0.090s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 9.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 1830.
+Total: 1839.
+> val it =
+    ("List",
+     SOME(``List_size``,
+          |- (!f. List_size f Nil = 0) /\
+             !f a0 a1. List_size f (Cons a0 a1) = 1 + (f a0 + List_size f a1)),
+     SOME(``encode_List``,
+          |- (!f. encode_List f Nil = [T]) /\
+             !f a0 a1.
+               encode_List f (Cons a0 a1) =
+               APPEND [F] (APPEND (f a0) (encode_List f a1)))) :
+  string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined type: "tri">>
+runtime: 0.120s,    gctime: 0.020s,     systime: 0.000s.
+Axioms asserted: 0.
+Definitions made: 8.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 1708.
+Total: 1716.
+> val it =
+    ("tri", SOME(``tri_size``, |- !x. tri_size x = 0),
+     SOME(``encode_tri``,
+          |- (encode_tri ONE = [T; T]) /\ (encode_tri TWO = [T; F]) /\
+             (encode_tri THREE = [F; T]))) :
+  string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined types: "command", "expression">>
+runtime: 8.460s,    gctime: 1.970s,     systime: 0.010s.
+Axioms asserted: 0.
+Definitions made: 36.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 18930.
+Total: 18966.
+> val it =
+    ("command",
+     SOME(``command_size``,
+          |- (!a. command_size (Assignment a) = 1 + command2_size a) /\
+             (!a. command_size (Sequence a) = 1 + command1_size a) /\
+             (!a. expression_size (Numeral a) = 1 + a) /\
+             (!a. expression_size (Plus a) = 1 + command3_size a) /\
+             (!a. expression_size (Valof a) = 1 + command_size a) /\
+             (command1_size [] = 0) /\
+             (!a0 a1.
+                command1_size (a0::a1) =
+                1 + (command_size a0 + command1_size a1)) /\
+             (!a0 a1.
+                command2_size (a0,a1) =
+                1 + (list_size (\x. x) a0 + command4_size a1)) /\
+             (!a0 a1.
+                command3_size (a0,a1) =
+                1 + (expression_size a0 + expression_size a1)) /\
+             (command4_size [] = 0) /\
+             !a0 a1.
+               command4_size (a0::a1) =
+               1 + (expression_size a0 + command4_size a1)),
+     SOME(``encode_command``,
+          |- (!a.
+                encode_command (Assignment a) = APPEND [T] (encode_command2 a)) /\
+             (!a. encode_command (Sequence a) = APPEND [F] (encode_command1 a)) /\
+             (!a. encode_expression (Numeral a) = APPEND [T; T] (encode_num a)) /\
+             (!a.
+                encode_expression (Plus a) = APPEND [T; F] (encode_command3 a)) /\
+             (!a.
+                encode_expression (Valof a) = APPEND [F; T] (encode_command a)) /\
+             (encode_command1 [] = [T]) /\
+             (!a0 a1.
+                encode_command1 (a0::a1) =
+                APPEND [F] (APPEND (encode_command a0) (encode_command1 a1))) /\
+             (!a0 a1.
+                encode_command2 (a0,a1) =
+                APPEND (encode_list encode_num a0) (encode_command4 a1)) /\
+             (!a0 a1.
+                encode_command3 (a0,a1) =
+                APPEND (encode_expression a0) (encode_expression a1)) /\
+             (encode_command4 [] = [T]) /\
+             !a0 a1.
+               encode_command4 (a0::a1) =
+               APPEND [F] (APPEND (encode_expression a0) (encode_command4 a1))))
+     : string * (term * thm) option * (term * thm) option
+- <<HOL message: Defined types: "exp", "bexp">>
+runtime: 3.950s,    gctime: 0.670s,     systime: 0.010s.
+Axioms asserted: 0.
+Definitions made: 29.
+Oracle invocations: 0.
+Theorems loaded from disk: 0.
+HOL primitive inference steps: 16472.
+Total: 16501.
+> val it =
+    ("exp",
+     SOME(``exp_size``,
+          |- (!f f1 a. exp_size f f1 (VAR a) = 1 + f a) /\
+             (!f f1 a0 a1 a2.
+                exp_size f f1 (IF a0 a1 a2) =
+                1 +
+                (bexp_size f f1 a0 + (exp_size f f1 a1 + exp_size f f1 a2))) /\
+             (!f f1 a0 a1.
+                exp_size f f1 (APP a0 a1) = 1 + (f1 a0 + exp1_size f f1 a1)) /\
+             (!f f1 a0 a1.
+                bexp_size f f1 (EQ a0 a1) =
+                1 + (exp_size f f1 a0 + exp_size f f1 a1)) /\
+             (!f f1 a0 a1.
+                bexp_size f f1 (LEQ a0 a1) =
+                1 + (exp_size f f1 a0 + exp_size f f1 a1)) /\
+             (!f f1 a0 a1.
+                bexp_size f f1 (AND a0 a1) =
+                1 + (bexp_size f f1 a0 + bexp_size f f1 a1)) /\
+             (!f f1 a0 a1.
+                bexp_size f f1 (OR a0 a1) =
+                1 + (bexp_size f f1 a0 + bexp_size f f1 a1)) /\
+             (!f f1 a. bexp_size f f1 (NOT a) = 1 + bexp_size f f1 a) /\
+             (!f f1. exp1_size f f1 [] = 0) /\
+             !f f1 a0 a1.
+               exp1_size f f1 (a0::a1) =
+               1 + (exp_size f f1 a0 + exp1_size f f1 a1)),
+     SOME(``encode_exp``,
+          |- (!f f1 a. encode_exp f f1 (VAR a) = APPEND [T; T] (f a)) /\
+             (!f f1 a0 a1 a2.
+                encode_exp f f1 (IF a0 a1 a2) =
+                APPEND [T; F]
+                  (APPEND (encode_bexp f f1 a0)
+                     (APPEND (encode_exp f f1 a1) (encode_exp f f1 a2)))) /\
+             (!f f1 a0 a1.
+                encode_exp f f1 (APP a0 a1) =
+                APPEND [F; T] (APPEND (f1 a0) (encode_exp1 f f1 a1))) /\
+             (!f f1 a0 a1.
+                encode_bexp f f1 (EQ a0 a1) =
+                APPEND [T; T; T]
+                  (APPEND (encode_exp f f1 a0) (encode_exp f f1 a1))) /\
+             (!f f1 a0 a1.
+                encode_bexp f f1 (LEQ a0 a1) =
+                APPEND [T; T; F]
+                  (APPEND (encode_exp f f1 a0) (encode_exp f f1 a1))) /\
+             (!f f1 a0 a1.
+                encode_bexp f f1 (AND a0 a1) =
+                APPEND [T; F; T]
+                  (APPEND (encode_bexp f f1 a0) (encode_bexp f f1 a1))) /\
+             (!f f1 a0 a1.
+                encode_bexp f f1 (OR a0 a1) =
+                APPEND [T; F; F]
+                  (APPEND (encode_bexp f f1 a0) (encode_bexp f f1 a1))) /\
+             (!f f1 a.
+                encode_bexp f f1 (NOT a) =
+                APPEND [F; T; T] (encode_bexp f f1 a)) /\
+             (!f f1. encode_exp1 f f1 [] = [T]) /\
+             !f f1 a0 a1.
+               encode_exp1 f f1 (a0::a1) =
+               APPEND [F] (APPEND (encode_exp f f1 a0) (encode_exp1 f f1 a1))))
+     : string * (term * thm) option * (term * thm) option
+- > val it =
+    |- encode_list
+         (encode_prod encode_num
+            (encode_prod encode_num (encode_prod encode_num encode_num)))
+         [(1,2,3,4); (5,6,7,8)] =
+       [T; T; F; T; T; F; T; T; T; F; T; F; T; T; F; T; F; T; T; T; T; F; F;
+        T; T; F; F; T; T; T; F; T; F; T; F; T; T; F; T; F; T; F; T; T; F] : thm
+- > val it =
+    |- encode_prod (encode_option encode_bool)
+         (encode_prod encode_num (encode_list encode_bool))
+         (SOME F,123,[F; T]) =
+       [T; F; T; F; T; F; F; F; F; F; T; T; T; F; T; T; F] : thm
+- > val it = |- encode_list encode_num [] = [F] : thm
+- > val it =
+    |- encode_list encode_num [1; 2; 3] =
+       [T; T; F; T; T; T; F; T; T; T; T; F; T; F; T; T; F] : thm
+- > val it =
+    |- encode_prod encode_NumBoolNums encode_NumBoolNums
+         (Num 1,Nums [2; 3]) =
+       [T; T; T; F; T; T; F; T; T; F; T; T; T; T; F; T; F; T; T; F] : thm
+- > val it =
+    |- encode_NTree (Tree [Tree []; Tree [Tree []; Tree []]; Tree []]) =
+       [F; T; F; F; T; F; T; T; F; T; T] : thm
+- > val it =
+    |- encode_list (encode_sum encode_tri encode_NumBool0)
+         [INL TWO; INR (Bool0 T)] =
+       [T; T; T; F; T; F; F; T; F] : thm
+- > val it =
+    |- encode_command (Assignment ([1; 2],[Numeral 1])) =
+       [T; T; T; F; T; T; T; F; T; T; F; F; T; T; T; F; T; T; T] : thm
+- 

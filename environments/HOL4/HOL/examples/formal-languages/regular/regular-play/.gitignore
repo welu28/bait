@@ -1,0 +1,20 @@
+# some ignores only for this example project
+# ------------
+
+emit/*ML.sig
+emit/*ML.sml
+test/performance.log
+
+
+# standard ignores
+# ------------
+
+#*.ui
+#*.uo
+
+#*Theory.sig
+#*Theory.sml
+#.HOLMK
+#.hollogs
+
+#selftest.exe

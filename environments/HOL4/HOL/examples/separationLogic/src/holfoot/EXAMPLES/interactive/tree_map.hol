@@ -1,0 +1,23 @@
+(******************************************************************************)
+(* Boilerplate                                                                *)
+(******************************************************************************)
+
+(* load the libries
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
+*)
+
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+open treeTheory rich_listTheory;
+
+val _ = HOL_Interactive.toggle_quietdec();
+
+
+(******************************************************************************)
+(* Verify specification                                                       *)
+(******************************************************************************)
+
+val file = concat [examplesDir, "/interactive/tree_map.dsf"];
+val _ = holfoot_verify_spec file 
+                 [ add_rewrites [ TREE_MAP_THM ] ];

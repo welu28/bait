@@ -1,0 +1,22 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+combin.art: combin.otd
+
+endif
+
+selftest.exe: selftest.uo combinTheory.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe combin-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: combin-selftest.log
+
+combin-selftest.log: selftest.exe
+	$(tee ./selftest.exe, $@)
+
+endif

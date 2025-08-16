@@ -1,0 +1,38 @@
+CLINE_OPTIONS=--no_overlay
+
+PORTABLED = $(dprot $(SIGOBJ)/Portable.ui)
+
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES) selftest.exe
+
+FinalTag-sig.uo: FinalTag-sig.sml Nonce.ui $(PORTABLED)
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalTerm-sig.uo: FinalTerm-sig.sml $(dprot $(SIGOBJ)/HOLset.ui) Lib.uo \
+                  KernelSig.ui
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalType-sig.uo: FinalType-sig.sml Lib.ui
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
+	$(HOLMOSMLC) -c -toplevel $<
+
+FinalNet-sig.uo: FinalNet-sig.sml
+	$(HOLMOSMLC) -c -toplevel $<
+
+KNametab.uo: KNametab.sml $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) -c Table.ui $<
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe prekernel-selftest.log
+
+ifdef HOLSELFTESTLEVEL
+all: prekernel-selftest.log
+
+prekernel-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+endif

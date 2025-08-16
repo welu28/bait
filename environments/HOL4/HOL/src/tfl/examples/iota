@@ -1,0 +1,63 @@
+app load ["bossLib"];  open bossLib;
+
+(*---------------------------------------------------------------------------
+            An APL-style "iota" function.
+ ---------------------------------------------------------------------------*)
+
+val iota_def = 
+  Hol_defn "iota" 
+           `iota bot top = if bot > top then [] else bot::iota (bot+1) top`;
+
+
+val (iota_eqn, iota_ind) =
+  Defn.tprove 
+    (iota_def, 
+     WF_REL_TAC `measure \(b,t). SUC t - b` THEN DECIDE_TAC);
+
+
+(*---------------------------------------------------------------------------*
+ * A couple of properties.                                                   *
+ *---------------------------------------------------------------------------*)
+
+val iota_bounds = Q.prove
+(`!bot top n. MEM n (iota bot top) ==> bot <= n /\ n <= top`,
+ recInduct iota_ind
+  THEN REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC
+  THEN ONCE_REWRITE_TAC [iota_eqn]
+  THEN RW_TAC list_ss [listTheory.MEM]
+  THENL [DECIDE_TAC, 
+         DECIDE_TAC, 
+         PROVE_TAC [DECIDE (Term`x+y <= z ==> x<=z`)],
+         PROVE_TAC[]]);
+
+
+val iota_length = Q.prove
+(`!bot top. bot <= top ==> (LENGTH(iota bot top) = (top-bot)+1)`,
+ recInduct iota_ind
+  THEN REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC
+  THEN ONCE_REWRITE_TAC [iota_eqn]
+  THEN RW_TAC std_ss [listTheory.LENGTH]
+  THENL [DECIDE_TAC,
+         RW_TAC std_ss [arithmeticTheory.ONE,arithmeticTheory.ADD_CLAUSES] 
+           THEN RW_TAC std_ss [arithmeticTheory.ADD1] THEN
+           Cases_on `bot = top` THENL 
+            [RW_TAC std_ss [] 
+               THEN ONCE_REWRITE_TAC [iota_eqn] THEN RW_TAC list_ss [],
+             `bot+1 <= top` by DECIDE_TAC THEN
+             `LENGTH (iota (bot+1) top) = (top - (bot+1)) + 1` by RES_TAC
+               THEN Q.PAT_ASSUM `x = y` SUBST_ALL_TAC
+               THEN WEAKEN_TAC(fn tm => is_imp tm andalso not(is_neg tm))
+               THEN DECIDE_TAC]]);
+
+(*---------------------------------------------------------------------------
+      Some computations with iota.
+ ---------------------------------------------------------------------------*)
+
+val Eval = EVAL o Term;
+
+Eval `iota 0 0`;
+Eval `iota 0 12`;
+Eval `iota 12 10`;
+Eval `iota 12 100`;
+Eval `iota 250 351`;
+Eval `iota 0 1000`;

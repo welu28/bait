@@ -1,0 +1,8 @@
+proc(x,y) [x|-> ] {
+  x->tl = y;
+} [x|-> tl:y]
+
+main(x,z;)[emp] { 
+  x = new(); z= new(); x->tl=3; z->tl=3;
+  proc(x,4) || proc(z,5);
+} [x|->tl:4 * z|-> tl:5]

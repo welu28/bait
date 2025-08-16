@@ -1,0 +1,17 @@
+This example contains a correctness proof for the ARM6 microprocessor design.
+
+The files are as follows:  
+
+ * armScript.sml: A HOL specification of the ARM instruction set (v4).
+
+ * coreScript.sml: A HOL specification of the ARM6 micro-architecture.
+    This is based on Daniel Schostak's specification (Leeds). 
+
+ * onestepScript.sml and io_onestepScript.sml: A framework for carrying out
+    processor verifications.
+
+ * lemmasScript.sml: Some basic theorems about the ARM models.
+
+ * armLib: Some simple tactics and simpsets.
+
+ * correctness/: contains a proof of correctness (be patient when running!).
