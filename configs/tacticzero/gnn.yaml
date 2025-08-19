@@ -7,7 +7,7 @@ exp_config:
   name: tacticzero_gnn
 
 logging_config:
-  offline: true
+  offline: true  # ensure wandb runs offline
 
 model_config:
   model_type: formula-net-edges
@@ -19,3 +19,8 @@ model_config:
 # load pretrained encoder after running on HOL4 premise selection task
 pretrain: false
 pretrain_ckpt: ""
+
+trainer:
+  accelerator: gpu
+  devices: 1
+  max_epochs: 10  # optional: limit epochs for testing
