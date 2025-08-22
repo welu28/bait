@@ -2,6 +2,7 @@ import glob
 import torch
 import random
 import pickle
+import os
 from tqdm import tqdm
 
 from data.utils.graph_data_utils import get_depth_from_graph, get_directed_edge_index
@@ -10,13 +11,14 @@ from .ast_def_mizar import goal_to_graph, graph_to_dict
 if __name__ == '__main__':
     add_attention = False
     file_dir = 'raw_data'
+    out_dir = 'mizar_pickles'  # <- directory where we save all .pkl files
+    os.makedirs(out_dir, exist_ok=True)
 
     files = glob.glob(file_dir + '/*')
 
     expression_dict = {}
     mizar_labels = []
 
-    # Parse raw files
     for file in tqdm(files, desc="Processing raw files"):
         pos_thms, neg_thms = [], []
 
@@ -48,13 +50,11 @@ if __name__ == '__main__':
 
         mizar_labels.append((conj, pos_thms, neg_thms))
 
-    # Shuffle and split data
     random.shuffle(mizar_labels)
     train_data = mizar_labels[:int(0.8 * len(mizar_labels))]
     val_data = mizar_labels[int(0.8 * len(mizar_labels)):int(0.9 * len(mizar_labels))]
     test_data = mizar_labels[int(0.9 * len(mizar_labels)):]
 
-    # Build (conj, stmt, label) triples
     def build_pairs(dataset):
         pairs = []
         for conj, pos_thms, neg_thms in dataset:
@@ -66,7 +66,6 @@ if __name__ == '__main__':
     val_pairs = build_pairs(val_data)
     test_pairs = build_pairs(test_data)
 
-    # Build vocab
     vocab = {}
     idx = 0
     for k in expression_dict.keys():
@@ -80,7 +79,6 @@ if __name__ == '__main__':
     vocab['VAR'] = len(vocab)
     vocab['VARFUNC'] = len(vocab)
 
-    # Optionally add attention + depth
     if add_attention:
         print("Adding attention edge index and depth to graphs...")
         for k, v in tqdm(expression_dict.items()):
@@ -97,14 +95,19 @@ if __name__ == '__main__':
             v['attention_edge_index'] = attention_edge_index
             v['depth'] = depth
 
-    # Save everything to pickle
-    with open("mizar_data_new.pk", "wb") as f:
-        pickle.dump({
-            'expr_dict': expression_dict,
-            'train_data': train_pairs,
-            'val_data': val_pairs,
-            'test_data': test_pairs,
-            'vocab': vocab
-        }, f)
+    with open(os.path.join(out_dir, "expr_dict.pkl"), "wb") as f:
+        pickle.dump(expression_dict, f)
 
-    print("Saved preprocessed data to mizar_data_new.pk")
+    with open(os.path.join(out_dir, "train.pkl"), "wb") as f:
+        pickle.dump(train_pairs, f)
+
+    with open(os.path.join(out_dir, "val.pkl"), "wb") as f:
+        pickle.dump(val_pairs, f)
+
+    with open(os.path.join(out_dir, "test.pkl"), "wb") as f:
+        pickle.dump(test_pairs, f)
+
+    with open(os.path.join(out_dir, "vocab.pkl"), "wb") as f:
+        pickle.dump(vocab, f)
+
+    print(f"Saved preprocessed data to directory: {out_dir}")
