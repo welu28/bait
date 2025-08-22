@@ -2,7 +2,6 @@ import pickle
 import torch
 from lightning.pytorch import LightningDataModule
 from torch.utils.data.dataloader import DataLoader
-from tqdm import tqdm
 
 from data.utils.graph_data_utils import transform_expr, transform_batch
 
@@ -12,45 +11,45 @@ class PremiseDataModule(LightningDataModule):
         super().__init__()
         self.config = config
 
-    def setup(self, stage: str) -> None:
-        source = self.config.source
+    def setup(self, stage: str = None) -> None:
+        # Use directory with pickle files
+        data_dir = self.config.data_options['directory']  # path to your pickle folder
 
-        if source == 'mongodb':
-            raise NotImplementedError(
-                "MongoDB source disabled. Use 'directory' with a pickle file instead."
-            )
+        # Load pickles
+        with open(f"{data_dir}/expr_dict.pkl", "rb") as f:
+            expr_dict = pickle.load(f)
+        with open(f"{data_dir}/train.pkl", "rb") as f:
+            train_pairs = pickle.load(f)
+        with open(f"{data_dir}/val.pkl", "rb") as f:
+            val_pairs = pickle.load(f)
+        with open(f"{data_dir}/test.pkl", "rb") as f:
+            test_pairs = pickle.load(f)
+        with open(f"{data_dir}/vocab.pkl", "rb") as f:
+            vocab = pickle.load(f)
 
-        elif source == 'directory':
-            data_dir = self.config.data_options['directory']  # path to your .pk file
-            with open(data_dir, 'rb') as f:
-                self.data = pickle.load(f)
+        # Transform expressions
+        self.vocab = vocab
+        self.expr_dict = {k: self.to_data(v) for k, v in expr_dict.items()}
 
-            # load vocab + expression graphs
-            self.vocab = self.data['vocab']
-            self.expr_dict = {k: self.to_data(v) for k, v in self.data['expr_dict'].items()}
-
-            # splits
-            self.train_data = self.data['train_data']
-            self.val_data = self.data['val_data']
-            self.test_data = self.data['test_data']
-
-        else:
-            raise NotImplementedError
+        # Splits
+        self.train_data = train_pairs
+        self.val_data = val_pairs
+        self.test_data = test_pairs
 
     def transfer_batch_to_device(self, batch, device: torch.device, dataloader_idx: int):
-        if self.config.type == 'custom':
+        if getattr(self.config, 'type', None) == 'custom':
             pass
         else:
             batch = super().transfer_batch_to_device(batch, device, dataloader_idx)
         return batch
 
     def list_to_data(self, data_list):
-        # always use in-memory dictionary, since we no longer stream from Mongo
+        # always use in-memory dictionary
         batch = [self.expr_dict[d] for d in data_list]
         return transform_batch(batch, config=self.config)
 
     def to_data(self, expr):
-        return transform_expr(expr, self.config.type, self.vocab, self.config)
+        return transform_expr(expr, getattr(self.config, 'type', None), self.vocab, self.config)
 
     def collate_data(self, batch):
         y = torch.LongTensor([b['y'] for b in batch])
