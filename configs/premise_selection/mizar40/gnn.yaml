@@ -4,7 +4,7 @@ defaults:
   - /data_type/gnn@_here_
 
 exp_config:
-  name: gnn
+  name: gnn_pickle  
 
 model:
   goal_embedding_module:
@@ -22,8 +22,8 @@ model:
     batch_norm: true
 
 trainer:
-  strategy: auto       
+  strategy: auto
   accelerator: gpu     
-  devices: 1           
-  max_epochs: 50
-  log_every_n_steps: 50
+  devices: 1
+  max_epochs: 30        
+  log_every_n_steps: 20
