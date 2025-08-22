@@ -12,8 +12,8 @@ class PremiseDataModule(LightningDataModule):
         self.config = config
 
     def setup(self, stage: str = None) -> None:
-        # Use directory with pickle files
-        data_dir = self.config.data_options['directory']  # path to your pickle folder
+        # Use pickle_path from config
+        data_dir = self.config.data_options['pickle_path']  # path to your pickle folder
 
         # Load pickles
         with open(f"{data_dir}/expr_dict.pkl", "rb") as f:
