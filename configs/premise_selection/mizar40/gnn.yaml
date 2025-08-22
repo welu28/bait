@@ -4,7 +4,7 @@ defaults:
   - /data_type/gnn@_here_
 
 exp_config:
-    name: gnn
+  name: gnn
 
 model:
   goal_embedding_module:
@@ -20,3 +20,10 @@ model:
     embedding_dim: 128
     num_iterations: 4
     batch_norm: true
+
+trainer:
+  strategy: auto       
+  accelerator: gpu     
+  devices: 1           
+  max_epochs: 50
+  log_every_n_steps: 50
