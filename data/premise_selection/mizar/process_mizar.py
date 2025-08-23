@@ -10,7 +10,7 @@ from .ast_def_mizar import goal_to_graph, graph_to_dict
 
 if __name__ == '__main__':
     add_attention = False
-    file_dir = 'raw_data'
+    file_dir = 'data/premise_selection/mizar/raw_data'
     out_dir = 'mizar_pickles'  # <- directory where we save all .pkl files
     os.makedirs(out_dir, exist_ok=True)
 
